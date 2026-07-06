@@ -7,7 +7,7 @@ React + Material UI console.
 
 ```
 dr-system/
-├── backend/            FastAPI service, MySQL models, telemetry store, AI engine, simulator
+├── backend/            FastAPI service, SQL models, telemetry store, AI engine, simulator
 └── frontend/            React + MUI console
 ```
 
@@ -31,7 +31,6 @@ workflow — see "Future expansion" below.
 
 - Python 3.10+
 - Node.js 18+
-- MySQL 8 (or use the included `docker-compose.yml`)
 
 ## Backend setup
 
@@ -50,8 +49,7 @@ cd .. && docker compose up -d mysql && cd backend
 python seed_demo.py
 
 # start the API (creates tables automatically on startup)
-venv\Scripts\Activate.ps1
-
+Activate virtual environment ---> venv\Scripts\Activate.ps1
 uvicorn app.main:app --reload
 ```
 
@@ -88,23 +86,6 @@ npm start
 ```
 
 Opens at `http://localhost:3000`: Dashboard, Devices, Recommendations, Events.
-
-## Telemetry store: SQLite vs HBase
-
-By default (`TELEMETRY_BACKEND=sqlite`) telemetry is stored in an embedded
-SQLite file so the whole project runs with zero external services beyond
-MySQL. This mirrors a wide-column time-series table (`device_id`,
-`timestamp`, JSON payload) and is a drop-in stand-in for a real time-series
-store.
-
-To use a real HBase cluster instead:
-
-1. `pip install happybase`
-2. Run an HBase Thrift gateway (`hbase thrift start`)
-3. Set `TELEMETRY_BACKEND=hbase`, `HBASE_HOST`, `HBASE_PORT` in `.env`
-
-Both implementations satisfy the same `TelemetryStore` interface
-(`app/services/telemetry_store.py`), so no other code changes are needed.
 
 ## AI recommendation engine
 

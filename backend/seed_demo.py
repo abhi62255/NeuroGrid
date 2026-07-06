@@ -34,7 +34,7 @@ TENANTS = [
         "mid_peak_rate": 0.24,
         "off_peak_rate": 0.14,
         "super_off_peak_rate": 0.09,
-        "device_count": 100,
+        "device_count": 10,
     },
     {
         "tenant_uid": "pacific-power",
@@ -48,7 +48,7 @@ TENANTS = [
         "mid_peak_rate": 0.31,
         "off_peak_rate": 0.18,
         "super_off_peak_rate": 0.10,
-        "device_count": 50,
+        "device_count": 5,
     },
     {
         "tenant_uid": "midwest-energy",
@@ -62,7 +62,7 @@ TENANTS = [
         "mid_peak_rate": 0.22,
         "off_peak_rate": 0.12,
         "super_off_peak_rate": 0.07,
-        "device_count": 50,
+        "device_count": 3,
     },
 ]
 
