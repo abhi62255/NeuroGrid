@@ -55,7 +55,8 @@ uvicorn app.main:app --reload
 
 The API is now live at `http://localhost:8000` (docs at `/docs`). A
 background scheduler runs the AI recommendation engine every
-`RECOMMENDATION_INTERVAL_SECONDS` (default 300s) for every active tenant.
+`RECOMMENDATION_INTERVAL_SECONDS` (default 3600s) for every active tenant.
+
 
 ### Start the telemetry simulator (separate process)
 
