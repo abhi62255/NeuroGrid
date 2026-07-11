@@ -49,6 +49,7 @@ class Recommendation(Base):
 
     # raw structured LLM output, kept for audit / debugging
     raw_llm_response = Column(JSON, nullable=True)
+    event_type = Column(String(50), default="stop_charging", nullable=True)
 
     accepted_by_user = Column(Integer, ForeignKey("users.id"), nullable=True)
     event_id = Column(Integer, ForeignKey("events.event_id"), nullable=True)

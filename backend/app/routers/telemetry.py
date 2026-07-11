@@ -26,6 +26,7 @@ def receive_telemetry(payload: TelemetryIn, db: Session = Depends(get_db)):
             Device.charging_status: payload.charging_status,
             Device.current_power_kw: payload.charging_power_kw,
             Device.plugged_in: 1 if payload.plugged_in else 0,
+            Device.home_plugged: 1 if payload.home_plugged else 0,
         }
     )
     db.commit()

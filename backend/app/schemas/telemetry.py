@@ -14,6 +14,7 @@ class TelemetryIn(BaseModel):
     battery_temperature_c: Optional[float] = None
     location: Optional[str] = None
     plugged_in: bool = False
+    home_plugged: bool = False
     estimated_departure_time: Optional[datetime] = None
     estimated_arrival_time: Optional[datetime] = None
     available_flexibility_kw: Optional[float] = None

@@ -30,6 +30,7 @@ class Event(Base):
     start_time = Column(DateTime(timezone=True), nullable=False)
     end_time = Column(DateTime(timezone=True), nullable=False)
     event_status = Column(Enum(EventStatus), default=EventStatus.scheduled, nullable=False)
+    event_type = Column(String(50), default="stop_charging", nullable=True)
 
     created_from_recommendation = Column(
         Integer, ForeignKey("recommendations.recommendation_id"), nullable=True

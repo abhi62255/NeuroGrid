@@ -60,6 +60,9 @@ class Device(Base):
     current_power_kw = Column(Float, nullable=True)
     location = Column(String(255), nullable=True)
     plugged_in = Column(Integer, default=0)  # 0/1 boolean for MySQL portability
+    home_plugged = Column(Integer, default=0)  # 0/1 boolean for MySQL portability
+    max_soc = Column(Float, default=90.0, nullable=True)
+    min_soc = Column(Float, default=20.0, nullable=True)
 
     status = Column(Enum(DeviceStatus), default=DeviceStatus.enrolled, nullable=False)
 

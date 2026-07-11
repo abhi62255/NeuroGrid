@@ -145,6 +145,9 @@ try:
                 model = random.choice(["Model 3", "Model Y", "F-150 Lightning", "Bolt EV", "IONIQ 6", "EV6", "R1T"])
                 status = random.choice(CHARGING_STATUSES)
                 plugged_in = status in (ChargingStatus.charging, ChargingStatus.idle, ChargingStatus.completed)
+                max_soc = round(random.uniform(80, 95), 1)
+                min_soc = round(random.uniform(15, 30), 1)
+                home_plugged = plugged_in and (j % 5 != 0)
                 db.add(Device(
                     tenant_id=tenant.id,
                     device_type="ev",
@@ -156,6 +159,9 @@ try:
                     charging_status=status,
                     current_power_kw=round(random.uniform(4, 11), 2) if status == ChargingStatus.charging else 0.0,
                     plugged_in=1 if plugged_in else 0,
+                    home_plugged=1 if home_plugged else 0,
+                    max_soc=max_soc,
+                    min_soc=min_soc,
                     status="enrolled",
                 ))
             db.commit()

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Paper } from "@mui/material";
+import { Box, Typography, Paper, Chip } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { EventAPI } from "../api/client";
 import StatusChip from "../components/StatusChip";
@@ -18,16 +18,30 @@ export default function Events() {
   const columns = [
     { field: "event_id", headerName: "Event ID", width: 100 },
     {
+      field: "event_type",
+      headerName: "Event Type",
+      width: 140,
+      renderCell: (p) => (
+        <Chip
+          label={p.value === "start_charging" ? "Smart Charge" : "Curtailment"}
+          size="small"
+          color={p.value === "start_charging" ? "primary" : "secondary"}
+          variant="outlined"
+          sx={{ fontWeight: 600 }}
+        />
+      ),
+    },
+    {
       field: "start_time",
       headerName: "Start Time",
       width: 190,
-      valueFormatter: (p) => (p.value ? new Date(p.value).toLocaleString() : "—"),
+      valueFormatter: (value) => (value ? new Date(value).toLocaleString() : "—"),
     },
     {
       field: "end_time",
       headerName: "End Time",
       width: 190,
-      valueFormatter: (p) => (p.value ? new Date(p.value).toLocaleString() : "—"),
+      valueFormatter: (value) => (value ? new Date(value).toLocaleString() : "—"),
     },
     {
       field: "event_status",

@@ -28,28 +28,34 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.device import Device
 from app.models.recommendation import Recommendation, RecommendationDevice, RecommendationStatus
+from app.models.event import Event, EventStatus
 from app.services import tariff_service
 from app.services.telemetry_store import get_telemetry_store
 
-SYSTEM_PROMPT = """You are an expert electric-grid Demand Response (DR) analyst.
-You will be given a JSON summary of an electric-vehicle (EV) fleet's current
-telemetry, the utility's current electricity tariff/price period, and DR
-program constraints. Decide whether a Demand Response event should be
-recommended right now.
+# todo: also give chagrging events
 
-Guidance:
-- Prioritize recommending events during On-Peak (expensive) pricing periods.
-- Avoid recommending events during Off-Peak periods unless grid_signal
-  indicates a specific non-price reason (e.g. congestion) is present.
-- Only include devices that are currently charging or plugged-in with
-  sufficient flexibility (will not depart before the event ends).
-- Respect max_event_duration_minutes and min_required_load_reduction_kw.
+SYSTEM_PROMPT = """You are an expert electric-grid Demand Response (DR) and Smart Charging analyst.
+You will be given a JSON summary of an electric-vehicle (EV) fleet's current
+telemetry (including battery SOC, min_soc, max_soc, and departure times), the utility's current electricity tariff/price period, and DR
+program constraints. Decide whether a Demand Response event should be recommended right now.
+
+An event can be one of two types:
+1. "stop_charging" (Demand Response / Curtailment): Recommending that targeted EVs stop charging to reduce grid load.
+   - Recommending these events during On-Peak (expensive) pricing periods.
+   - Only target devices that are currently charging and plugged in at home, where their current SOC is strictly ABOVE their min_soc. If a device's current SOC is below its min_soc, it must be allowed to charge and NOT be curtailed.
+2. "start_charging" (Smart Charging): Recommending that targeted EVs start charging.
+   - Recommending these events during Off-Peak (cheap) pricing periods, OR when a device's current SOC is below its min_soc (regardless of peak period, to ensure user has minimum charge), OR depending on when they have to go (if they need to charge to reach their max_soc before the estimated_departure_time).
+   - Only target devices that are plugged in at home but not currently charging (or charging below capability), whose current SOC is below their max_soc.
+
+Constraints:
+- Respect max_event_duration_minutes and min_required_load_reduction_kw (for stop_charging events).
 - Be conservative with confidence when data is sparse.
 
 Respond with ONLY a single JSON object (no markdown, no prose) matching
 exactly this shape:
 {
   "recommend_event": boolean,
+  "event_type": "stop_charging" | "start_charging",
   "confidence": number (0-1),
   "reason": string,
   "recommended_start": ISO-8601 datetime string,
@@ -63,7 +69,11 @@ exactly this shape:
 """
 
 
-def build_fleet_summary(devices: List[Device], telemetry_by_device: Dict[int, Dict[str, Any]]) -> Dict[str, Any]:
+def build_fleet_summary(
+    devices: List[Device],
+    telemetry_by_device: Dict[int, Dict[str, Any]],
+    busy_device_ids: Optional[set] = None
+) -> Dict[str, Any]:
     """Aggregate device + latest-telemetry rows into a compact fleet summary for the LLM."""
     eligible = []
     total_power_kw = 0.0
@@ -71,12 +81,16 @@ def build_fleet_summary(devices: List[Device], telemetry_by_device: Dict[int, Di
     soc_values = []
 
     for dev in devices:
+        if busy_device_ids and dev.id in busy_device_ids:
+            continue
         t = telemetry_by_device.get(dev.id)
         if not t:
             continue
         if t.get("charging_status") not in ("charging", "idle"):
             continue
         if not t.get("plugged_in"):
+            continue
+        if not t.get("home_plugged"):
             continue
 
         soc = t.get("soc")
@@ -87,6 +101,8 @@ def build_fleet_summary(devices: List[Device], telemetry_by_device: Dict[int, Di
             {
                 "device_id": f"device_{dev.id}",
                 "soc": soc,
+                "min_soc": dev.min_soc or 20.0,
+                "max_soc": dev.max_soc or 90.0,
                 "charging_power_kw": power,
                 "available_flexibility_kw": flex,
                 "estimated_departure_time": t.get("estimated_departure_time"),
@@ -161,7 +177,51 @@ def generate_recommendation(db: Session, tenant_id: int, lookback_seconds: int =
 
     telemetry_by_device = {row["device_id"]: row for row in latest_rows}
 
-    fleet_summary = build_fleet_summary(devices, telemetry_by_device)
+    # ── Compute busy devices ────────────────────────────────────────────────
+    # Collect device IDs that are already targeted in an active/scheduled DR
+    # event OR in a pending recommendation for this tenant.  These devices
+    # must NOT appear in a parallel recommendation.
+    now = datetime.utcnow()
+
+    # Devices already in an active or scheduled Event
+    active_event_device_ids: set[int] = set()
+    active_events = (
+        db.query(Event)
+        .filter(
+            Event.tenant_id == tenant_id,
+            Event.event_status.in_([EventStatus.active, EventStatus.scheduled]),
+            Event.end_time > now,
+        )
+        .all()
+    )
+    for ev in active_events:
+        # Pull devices from the originating recommendation (if any)
+        if ev.created_from_recommendation:
+            links = (
+                db.query(RecommendationDevice)
+                .filter(RecommendationDevice.recommendation_id == ev.created_from_recommendation)
+                .all()
+            )
+            for link in links:
+                active_event_device_ids.add(link.device_id)
+
+    # Devices already in a pending recommendation (not yet accepted / rejected)
+    pending_rec_device_ids: set[int] = set()
+    pending_recs = (
+        db.query(Recommendation)
+        .filter(
+            Recommendation.tenant_id == tenant_id,
+            Recommendation.recommendation_status == RecommendationStatus.pending,
+        )
+        .all()
+    )
+    for prec in pending_recs:
+        for link in prec.device_links:
+            pending_rec_device_ids.add(link.device_id)
+
+    busy_device_ids = active_event_device_ids | pending_rec_device_ids
+
+    fleet_summary = build_fleet_summary(devices, telemetry_by_device, busy_device_ids=busy_device_ids)
     price_info = tariff_service.get_current_price_info(db, tenant_id)
 
     payload = {
@@ -187,6 +247,7 @@ def generate_recommendation(db: Session, tenant_id: int, lookback_seconds: int =
         estimated_customer_incentive=llm_result.get("estimated_customer_incentive"),
         estimated_utility_savings=llm_result.get("estimated_utility_savings"),
         raw_llm_response=llm_result,
+        event_type=llm_result.get("event_type", "stop_charging"),
     )
     db.add(rec)
     db.flush()  # get recommendation_id

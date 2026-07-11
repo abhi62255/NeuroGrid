@@ -71,6 +71,7 @@ class SimulatedDevice:
         now = datetime.utcnow()
         plugged_in = self.state in ("charging", "idle", "completed")
         flexibility = self.charging_power_kw * random.uniform(0.4, 1.0) if plugged_in else 0.0
+        home_plugged = plugged_in and (self.device_id % 5 != 0)
         return {
             "device_id": self.device_id,
             "tenant_id": self.tenant_id,
@@ -81,6 +82,7 @@ class SimulatedDevice:
             "battery_temperature_c": round(random.uniform(20, 38), 1),
             "location": "lat:%.4f,lon:%.4f" % (random.uniform(30, 45), random.uniform(-120, -75)),
             "plugged_in": plugged_in,
+            "home_plugged": home_plugged,
             "estimated_departure_time": (now + timedelta(hours=random.uniform(1, 10))).isoformat(),
             "estimated_arrival_time": None,
             "available_flexibility_kw": round(flexibility, 2),
@@ -145,6 +147,7 @@ def tick(sim_devices: List[SimulatedDevice], randomness: float):
                     Device.charging_status: record["charging_status"],
                     Device.current_power_kw: record["charging_power_kw"],
                     Device.plugged_in: 1 if record["plugged_in"] else 0,
+                    Device.home_plugged: 1 if record["home_plugged"] else 0,
                 }
             )
         db.commit()

@@ -11,6 +11,7 @@ class EventCreate(BaseModel):
     created_from_recommendation: Optional[int] = None
     trigger_source: str = "user"
     created_by: Optional[int] = None
+    event_type: Optional[str] = "stop_charging"
 
 
 class EventOut(BaseModel):
@@ -20,6 +21,7 @@ class EventOut(BaseModel):
     start_time: datetime
     end_time: datetime
     event_status: str
+    event_type: Optional[str] = "stop_charging"
     created_from_recommendation: Optional[int] = None
     trigger_source: str
     created_by: Optional[int] = None

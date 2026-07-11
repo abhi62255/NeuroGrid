@@ -27,6 +27,7 @@ class RecommendationOut(BaseModel):
     estimated_utility_savings: Optional[float] = None
     accepted_by_user: Optional[int] = None
     event_id: Optional[int] = None
+    event_type: Optional[str] = "stop_charging"
     targeted_device_count: Optional[int] = None
 
     @classmethod

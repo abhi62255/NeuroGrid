@@ -55,8 +55,11 @@ export default function DeviceDetail() {
                 <MetaRow label="Make / Model" value={`${device.make || "—"} ${device.model || ""}`} />
                 <MetaRow label="Battery capacity" value={`${device.battery_capacity_kwh ?? "—"} kWh`} />
                 <MetaRow label="Current SOC" value={`${Math.round(device.current_soc ?? 0)}%`} />
+                <MetaRow label="Min SOC Limit" value={device.min_soc != null ? `${device.min_soc}%` : "—"} />
+                <MetaRow label="Max SOC Limit" value={device.max_soc != null ? `${device.max_soc}%` : "—"} />
                 <MetaRow label="Current power" value={`${device.current_power_kw ?? 0} kW`} />
                 <MetaRow label="Location" value={device.location || "—"} />
+                <MetaRow label="Plugged at Home?" value={device.home_plugged ? "Yes" : "No"} />
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Typography variant="body2" color="text.secondary">
                     Charging status

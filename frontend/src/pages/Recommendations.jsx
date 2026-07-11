@@ -163,13 +163,27 @@ export default function Recommendations() {
       field: "tenant_id",
       headerName: "Tenant",
       width: 180,
-      valueGetter: (p) => tenantMap[p.value] || `Tenant ${p.value}`,
+      valueGetter: (value) => tenantMap[value] || `Tenant ${value}`,
+    },
+    {
+      field: "event_type",
+      headerName: "Event Type",
+      width: 140,
+      renderCell: (p) => (
+        <Chip
+          label={p.value === "start_charging" ? "Smart Charge" : "Curtailment"}
+          size="small"
+          color={p.value === "start_charging" ? "primary" : "secondary"}
+          variant="outlined"
+          sx={{ fontWeight: 600 }}
+        />
+      ),
     },
     {
       field: "recommendation_time",
       headerName: "Generated",
       width: 170,
-      valueFormatter: (p) => fmtDate(p.value),
+      valueFormatter: (value) => fmtDate(value),
     },
     {
       field: "confidence_score",
@@ -208,9 +222,9 @@ export default function Recommendations() {
     },
     {
       field: "predicted_load_reduction_kw",
-      headerName: "Load Reduction",
+      headerName: "Load Shift",
       width: 145,
-      valueFormatter: (p) => fmt(p.value, " kW"),
+      valueFormatter: (value) => fmt(value, " kW"),
     },
     {
       field: "recommendation_status",
@@ -307,8 +321,16 @@ export default function Recommendations() {
                   <StatusChip status={selected.recommendation_status} />
                 </Box>
               </Box>
-              <Typography variant="caption" color="text.secondary">
-                {tenantMap[selected.tenant_id] || `Tenant ${selected.tenant_id}`} · Generated {fmtDate(selected.recommendation_time)}
+              <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                <span>{tenantMap[selected.tenant_id] || `Tenant ${selected.tenant_id}`} · Generated {fmtDate(selected.recommendation_time)}</span>
+                {selected.event_type && (
+                  <Chip
+                    size="small"
+                    label={selected.event_type === "start_charging" ? "Smart Charge" : "Curtailment"}
+                    color={selected.event_type === "start_charging" ? "primary" : "secondary"}
+                    sx={{ fontSize: "0.7rem", height: 18 }}
+                  />
+                )}
               </Typography>
             </DialogTitle>
 
@@ -323,9 +345,9 @@ export default function Recommendations() {
                   value={selected.targeted_device_count != null ? `${selected.targeted_device_count}` : selected.device_links ? `${selected.device_links.length}` : "—"}
                   accent={gridColors.slate}
                 />
-                <MetricBlock
+                 <MetricBlock
                   icon={<ElectricBoltIcon fontSize="small" />}
-                  label="Load Reduction"
+                  label={selected.event_type === "start_charging" ? "Load Increase" : "Load Reduction"}
                   value={fmt(selected.predicted_load_reduction_kw, " kW")}
                   accent="#2A5CAA"
                 />

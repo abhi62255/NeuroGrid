@@ -12,6 +12,8 @@ class DeviceBase(BaseModel):
     battery_capacity_kwh: Optional[float] = None
     location: Optional[str] = None
     attributes: Optional[Dict[str, Any]] = None
+    max_soc: Optional[float] = 90.0
+    min_soc: Optional[float] = 20.0
 
 
 class DeviceCreate(DeviceBase):
@@ -27,8 +29,11 @@ class DeviceUpdate(BaseModel):
     current_power_kw: Optional[float] = None
     location: Optional[str] = None
     plugged_in: Optional[bool] = None
+    home_plugged: Optional[bool] = None
     status: Optional[str] = None
     attributes: Optional[Dict[str, Any]] = None
+    max_soc: Optional[float] = None
+    min_soc: Optional[float] = None
 
 
 class DeviceOut(DeviceBase):
@@ -39,6 +44,7 @@ class DeviceOut(DeviceBase):
     charging_status: str
     current_power_kw: Optional[float] = None
     plugged_in: Optional[int] = None
+    home_plugged: Optional[int] = None
     status: str
     created_at: datetime
     updated_at: Optional[datetime] = None

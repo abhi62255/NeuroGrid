@@ -59,6 +59,7 @@ def accept_recommendation(recommendation_id: int, payload: RecommendationDecisio
         created_from_recommendation=rec.recommendation_id,
         trigger_source=TriggerSource.ai,
         created_by=payload.user_id,
+        event_type=rec.event_type,
     )
     db.add(event)
     db.flush()

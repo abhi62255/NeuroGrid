@@ -88,13 +88,13 @@ export default function DeviceList() {
         field: "current_power_kw",
         headerName: "Power",
         width: 100,
-        valueFormatter: (p) => (p.value != null ? `${p.value} kW` : "—"),
+        valueFormatter: (value) => (value != null ? `${value} kW` : "—"),
       },
       {
         field: "tenant_id",
         headerName: "Tenant",
         width: 175,
-        valueGetter: (p) => tenantMap[p.value] || `Tenant ${p.value}`,
+        valueGetter: (value) => tenantMap[value] || `Tenant ${value}`,
       },
       {
         field: "status",
