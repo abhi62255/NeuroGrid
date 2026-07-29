@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
@@ -53,11 +54,16 @@ def accept_recommendation(recommendation_id: int, payload: RecommendationDecisio
     if rec.recommended_start is None or rec.recommended_end is None:
         raise HTTPException(400, "Recommendation has no event window; cannot create event")
 
+    now = datetime.utcnow()
+    # If the recommended start is in the past (e.g. AI generated it earlier),
+    # start the event immediately rather than scheduling it for the past.
+    start_time = rec.recommended_start if rec.recommended_start > now else now
+
     event = Event(
         tenant_id=rec.tenant_id,
-        start_time=rec.recommended_start,
+        start_time=start_time,
         end_time=rec.recommended_end,
-        event_status=EventStatus.scheduled,
+        event_status=EventStatus.active,   # Accept = go live immediately
         created_from_recommendation=rec.recommendation_id,
         trigger_source=TriggerSource.ai,
         created_by=payload.user_id,
