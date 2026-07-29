@@ -11,10 +11,9 @@ export default function StatCard({ label, value, accent, icon }) {
         display: "flex",
         flexDirection: "column",
         gap: 1,
-        borderLeft: `4px solid ${accent || "#0073A8"}`,
+        // border shorthand FIRST, then override left side — order matters in emotion
         border: "1px solid #DDE3EC",
-        borderLeftWidth: 4,
-        borderLeftColor: accent || "#0073A8",
+        borderLeft: `4px solid ${accent || "#0073A8"}`,
         transition: "box-shadow 0.2s",
         "&:hover": { boxShadow: "0 4px 16px rgba(0,48,84,0.10)" },
       }}
@@ -23,10 +22,13 @@ export default function StatCard({ label, value, accent, icon }) {
         <Typography variant="overline" sx={{ color: "text.secondary", fontSize: 11 }}>
           {label}
         </Typography>
-        <Box sx={{ color: accent || "#0073A8", opacity: 0.8, display: "flex" }}>{icon}</Box>
+        <Box sx={{ color: accent || "#0073A8", opacity: 0.75, display: "flex" }}>{icon}</Box>
       </Box>
-      <Typography variant="h3" sx={{ fontWeight: 700, fontSize: 32, letterSpacing: "-0.02em", color: "text.primary" }}>
-        {value}
+      <Typography
+        variant="h3"
+        sx={{ fontWeight: 700, fontSize: 30, letterSpacing: "-0.02em", lineHeight: 1.1, color: "text.primary" }}
+      >
+        {value ?? "–"}
       </Typography>
     </Paper>
   );

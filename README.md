@@ -1,117 +1,165 @@
-# Grid Flex — AI-Powered Demand Response Event Recommendation System
+# NeuroGrid — AI-Powered Demand Response Platform
 
-An EV-first, device-agnostic platform that continuously ingests EV telemetry,
-uses an LLM to decide whether a Demand Response (DR) event should be
-recommended, and lets an operator approve/reject the recommendation from a
-React + Material UI console.
+An EV-first, multi-tenant Demand Response (DR) platform.  
+A **FastAPI** backend drives scheduling, AI recommendations (Gemini), and live telemetry.  
+A **React + MUI** frontend lets operators monitor and manage DR events across every tenant.
 
-```
-dr-system/
-├── backend/            FastAPI service, SQL models, telemetry store, AI engine, simulator
-└── frontend/            React + MUI console
-```
+---
 
 ## Architecture
 
-| Component | Tech | Notes |
-|---|---|---|
-| Relational data | MySQL (SQLAlchemy models) | Tenants, Users, Devices, Tariffs, Recommendations, Events |
-| Telemetry store | Pluggable — SQLite by default, real HBase via HappyBase | Same `TelemetryStore` interface either way; swap with `TELEMETRY_BACKEND=hbase` |
-| Telemetry simulator | Python script | Simulates hundreds/thousands of EVs cycling charging/driving/idle/unplugged/completed |
-| AI recommendation engine | Anthropic Claude via structured JSON prompt | Runs on a background scheduler + on-demand API trigger |
-| REST API | FastAPI | Tenants, Users, Devices, Telemetry, Tariffs, Recommendations, Events, Dashboard |
-| Frontend | React + MUI + Recharts + MUI X DataGrid | Dashboard, Device List, Device Detail, Recommendations, Events |
+```
+frontend/   React 18 + MUI v5 + Recharts
+backend/    FastAPI + SQLAlchemy + APScheduler + Google Gemini
+            └── SQLite (default, zero-config local dev)
+            └── MySQL (optional, for production)
+```
 
-The telemetry store and the device schema (`device_type` + JSON `attributes`
-column) are both designed so thermostats, batteries, HVAC, and water heaters
-can be added later as adapters without breaking the schema or the AI
-workflow — see "Future expansion" below.
+---
 
 ## Prerequisites
 
-- Python 3.10+
-- Node.js 18+
+| Tool | Version |
+|------|---------|
+| Python | **3.12** (3.13 has pydantic-core build issues) |
+| Node.js | 18 + |
+| npm | 9 + |
 
-## Backend setup
+---
+
+## Quick Start (macOS / Linux)
+
+### 1 · Backend
 
 ```bash
 cd backend
-python -m venv venv && source venv/bin/activate      # optional but recommended
+
+# Create a macOS-native virtual environment
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
+# Configure environment
 cp .env.example .env
-# edit .env: set MYSQL_* credentials and ANTHROPIC_API_KEY
+# Edit .env — at minimum set GEMINI_API_KEY
+# DATABASE_URL defaults to SQLite (sqlite:///./main.db) — no MySQL needed for local dev
 
-# start MySQL if you don't already have one:
-cd .. && docker compose up -d mysql && cd backend
-
-# create demo tenant, operator user, and a sample TOU tariff
+# Seed the demo data (creates 3 tenants + devices)
 python seed_demo.py
 
-# start the API (creates tables automatically on startup)
-Activate virtual environment ---> venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload
+# Start the API server
+uvicorn app.main:app --reload --port 8000
+# If port 8000 is occupied, use --port 8001 and update frontend/.env accordingly
 ```
 
-The API is now live at `http://localhost:8000` (docs at `/docs`). A
-background scheduler runs the AI recommendation engine every
-`RECOMMENDATION_INTERVAL_SECONDS` (default 3600s) for every active tenant.
+API docs available at `http://localhost:8000/docs`.
 
-
-### Start the telemetry simulator (separate process)
-
-```bash
-cd backend
-python run_simulator.py --tenant demo-utility --devices 300 --interval 45 --randomness 0.3
-```
-
-This continuously generates realistic telemetry for the seeded tenant and
-writes it to the telemetry store, and updates each `Device`'s cached
-state in MySQL.
-
-### Trigger a recommendation manually
-
-```bash
-curl -X POST http://localhost:8000/api/recommendations/generate/1
-```
-
-(tenant id `1` is the demo tenant created by `seed_demo.py`)
-
-## Frontend setup
+### 2 · Frontend
 
 ```bash
 cd frontend
+cp .env.example .env          # or create .env manually
+# Set REACT_APP_API_BASE_URL=http://localhost:8000/api   (adjust port if needed)
+
 npm install
-cp .env.example .env     # points REACT_APP_API_BASE_URL at the backend
-npm start
+npm start                     # Opens http://localhost:3000
 ```
 
-Opens at `http://localhost:3000`: Dashboard, Devices, Recommendations, Events.
+### 3 · Telemetry Simulators (optional)
 
-## AI recommendation engine
+Run a simulated EV fleet for each tenant to generate live telemetry:
 
-`app/services/ai_engine.py`:
+```bash
+cd backend
+source .venv/bin/activate
 
-1. Reads each enrolled device's latest telemetry.
-2. Aggregates fleet-level signals (flexible load, charging power, average
-   SOC, participation %) — this aggregation step is device-agnostic and
-   works from any adapter that emits the same summary shape.
-3. Resolves the tenant's current Time-of-Use tariff period and rate via
-   `app/services/tariff_service.py`.
-4. Sends a compact JSON payload to LLM with a system prompt that
-   instructs it to prioritize On-Peak periods and return a structured JSON
-   recommendation.
-5. Persists the recommendation + per-device participation links to MySQL.
+# List tenants
+curl http://localhost:8000/api/tenants/
 
-## Future expansion
+# Start a simulator per tenant (replace <uid> with actual tenant UIDs)
+PYTHONUNBUFFERED=1 python run_simulator.py --tenant-uid demo-utility    --num-evs 10 --interval 60 &
+PYTHONUNBUFFERED=1 python run_simulator.py --tenant-uid pacific-power    --num-evs 5  --interval 60 &
+PYTHONUNBUFFERED=1 python run_simulator.py --tenant-uid midwest-energy   --num-evs 3  --interval 60 &
+```
 
-- **New device types**: add a value to `DeviceType`, populate the `attributes`
-  JSON column with type-specific fields, and (if the telemetry shape
-  differs meaningfully) add a small adapter that maps that device's
-  telemetry into the same `build_fleet_summary` shape the AI engine expects.
-- **New decision factors** (weather, grid signals, market prices, carbon
-  intensity, etc.): extend the `payload` dict built in
-  `generate_recommendation()` — the LLM prompt and downstream persistence
-  logic don't need to change.
-- **Real HBase / production time-series store**: implement against the
-  existing `TelemetryStore` interface.
+---
+
+## Quick Start (Windows)
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cp .env.example .env
+python seed_demo.py
+uvicorn app.main:app --reload --port 8000
+```
+
+> **Note:** The `venv/` folder is excluded from git. Create a fresh one locally — never commit it.
+
+---
+
+## Environment Variables
+
+### `backend/.env`
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:///./main.db` | SQLAlchemy connection string |
+| `GEMINI_API_KEY` | — | Google Gemini API key (required for AI recommendations) |
+| `AI_MODEL` | `gemini-2.5-flash` | Gemini model name |
+| `RECOMMENDATION_INTERVAL_SECONDS` | `300` | How often the AI engine runs (seconds) |
+| `TELEMETRY_RETENTION_SECONDS` | `86400` | How far back "latest" telemetry queries look |
+
+### `frontend/.env`
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REACT_APP_API_BASE_URL` | `http://localhost:8000/api` | Backend API base URL |
+
+---
+
+## Project Structure
+
+```
+backend/
+  app/
+    models/         SQLAlchemy ORM models
+    routers/        FastAPI route handlers
+    services/       Business logic (AI engine, simulator, telemetry store)
+    schemas/        Pydantic request/response schemas
+    config.py       Settings loaded from .env
+    database.py     SQLAlchemy engine + session factory
+    main.py         FastAPI app + lifespan (scheduler start/stop)
+  requirements.txt
+  seed_demo.py      One-time demo data seeder
+  run_simulator.py  Multi-tenant EV telemetry simulator
+
+frontend/
+  src/
+    api/            Axios API client
+    components/     Layout, StatCard, StatusChip, Navbar
+    pages/          Dashboard, DeviceList, DeviceDetail, Recommendations, Events
+    theme.js        Uplight brand palette + MUI overrides
+```
+
+---
+
+## Key Features
+
+- **Multi-tenant** — full tenant isolation across devices, telemetry, and DR events
+- **AI recommendations** — Gemini analyses load forecasts + tariff schedules and suggests charge-shifting or curtailment events
+- **Live telemetry** — EV state-of-charge, charging status, and power draw tracked per device
+- **Tariff-aware scheduling** — Time-of-use and super-off-peak tariff periods are used to minimise cost
+- **Demand Response events** — Accept AI recommendations to create, activate, and complete DR events
+
+---
+
+## Development Notes
+
+- SQLite works out of the box — no database server required for local development
+- The AI engine runs on a schedule (default every 5 minutes); you can also trigger manually from the Recommendations page
+- `backend/venv`, `*.db` files, and `frontend/build` are **excluded from git** — see `.gitignore`
