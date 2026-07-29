@@ -37,38 +37,12 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     return event
 
 
-@router.post("/{event_id}/activate", response_model=EventOut)
-def activate_event(event_id: int, db: Session = Depends(get_db)):
-    event = db.get(Event, event_id)
-    if not event:
-        raise HTTPException(404, "Event not found")
-    if event.event_status not in (EventStatus.scheduled,):
-        raise HTTPException(400, f"Cannot activate an event with status '{event.event_status}'")
-    event.event_status = EventStatus.active
-    db.commit()
-    db.refresh(event)
-    return event
-
-
-@router.post("/{event_id}/complete", response_model=EventOut)
-def complete_event(event_id: int, db: Session = Depends(get_db)):
-    event = db.get(Event, event_id)
-    if not event:
-        raise HTTPException(404, "Event not found")
-    if event.event_status not in (EventStatus.scheduled, EventStatus.active):
-        raise HTTPException(400, f"Cannot complete an event with status '{event.event_status}'")
-    event.event_status = EventStatus.completed
-    db.commit()
-    db.refresh(event)
-    return event
-
-
 @router.post("/{event_id}/cancel", response_model=EventOut)
 def cancel_event(event_id: int, db: Session = Depends(get_db)):
     event = db.get(Event, event_id)
     if not event:
         raise HTTPException(404, "Event not found")
-    if event.event_status in (EventStatus.completed, EventStatus.cancelled, EventStatus.expired):
+    if event.event_status in (EventStatus.completed, EventStatus.cancelled):
         raise HTTPException(400, f"Event is already '{event.event_status}'")
     event.event_status = EventStatus.cancelled
     db.commit()

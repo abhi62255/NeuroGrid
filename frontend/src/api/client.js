@@ -33,8 +33,6 @@ export const RecommendationAPI = {
 export const EventAPI = {
   list: (params) => client.get("/events", { params }),
   get: (id) => client.get(`/events/${id}`),
-  activate: (id) => client.post(`/events/${id}/activate`),
-  complete: (id) => client.post(`/events/${id}/complete`),
   cancel: (id) => client.post(`/events/${id}/cancel`),
 };
 
