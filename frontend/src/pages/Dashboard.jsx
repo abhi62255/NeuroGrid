@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Grid, Typography, Paper, Box, Alert, Skeleton, Tooltip as MuiTooltip } from "@mui/material";
+import React, { useCallback, useState } from "react";
+import { Grid, Typography, Paper, Box, Alert, Skeleton, Tooltip as MuiTooltip, IconButton } from "@mui/material";
 import ApartmentOutlinedIcon from "@mui/icons-material/ApartmentOutlined";
 import EvStationOutlinedIcon from "@mui/icons-material/EvStationOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
@@ -7,8 +7,10 @@ import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import FlashOnOutlinedIcon from "@mui/icons-material/FlashOnOutlined";
 import WifiIcon from "@mui/icons-material/Wifi";
 import WifiOffIcon from "@mui/icons-material/WifiOff";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { DashboardAPI, RecommendationAPI, EventAPI, TenantAPI } from "../api/client";
 import { useTelemetrySocket } from "../hooks/useTelemetrySocket";
+import { useAutoRefresh, useRelativeTime } from "../hooks/useAutoRefresh";
 import StatCard from "../components/StatCard";
 import StatusChip from "../components/StatusChip";
 import { uplightColors } from "../theme";
@@ -35,12 +37,9 @@ function LiveFeedRow({ record }) {
       }}
     >
       <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
-      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 68, fontSize: 12 }}>
-        {ts}
-      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 68, fontSize: 12 }}>{ts}</Typography>
       <Typography variant="body2" sx={{ flex: 1, fontSize: 13 }}>
-        Device <strong>{record.device_id}</strong> ·{" "}
-        <span style={{ color }}>{record.charging_status ?? "—"}</span>
+        Device <strong>{record.device_id}</strong> · <span style={{ color }}>{record.charging_status ?? "—"}</span>
       </Typography>
       <Typography variant="body2" sx={{ minWidth: 44, textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>
         {record.soc != null ? `${Math.round(record.soc)}%` : "—"}
@@ -56,23 +55,35 @@ export default function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [recentRecs, setRecentRecs] = useState([]);
   const [recentEvents, setRecentEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [firstTenantUid, setFirstTenantUid] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      DashboardAPI.summary().then((r) => setSummary(r.data)),
-      RecommendationAPI.list({ limit: 5 }).then((r) => setRecentRecs(r.data.slice(0, 5))),
-      EventAPI.list({ limit: 5 }).then((r) => setRecentEvents(r.data.slice(0, 5))),
-      TenantAPI.list().then((r) => { if (r.data.length) setFirstTenantUid(r.data[0].uid); }),
-    ])
-      .catch(() => setError("Could not reach the backend API."))
-      .finally(() => setLoading(false));
+  const fetchAll = useCallback(async () => {
+    try {
+      const [summaryRes, recsRes, eventsRes, tenantsRes] = await Promise.all([
+        DashboardAPI.summary(),
+        RecommendationAPI.list({ limit: 5 }),
+        EventAPI.list({ limit: 5 }),
+        TenantAPI.list(),
+      ]);
+      setSummary(summaryRes.data);
+      setRecentRecs(recsRes.data.slice(0, 5));
+      setRecentEvents(eventsRes.data.slice(0, 5));
+      if (tenantsRes.data.length) setFirstTenantUid(tenantsRes.data[0].tenant_uid);
+      setError(null);
+    } catch {
+      setError("Could not reach the backend API.");
+    } finally {
+      setInitialLoading(false);
+    }
   }, []);
 
+  const { lastUpdated, refreshing, refresh } = useAutoRefresh(fetchAll, 30_000);
+  const updatedLabel = useRelativeTime(lastUpdated);
   const { feed, connected } = useTelemetrySocket(firstTenantUid);
+
+  const loading = initialLoading;
 
   const stats = [
     { label: "Tenants",                key: "total_tenants",       accent: uplightColors.navy,  icon: <ApartmentOutlinedIcon /> },
@@ -84,9 +95,23 @@ export default function Dashboard() {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 0.5 }}>Fleet overview</Typography>
+      {/* Header row with last-updated */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5, flexWrap: "wrap", gap: 1 }}>
+        <Typography variant="h4">Fleet overview</Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {lastUpdated && (
+            <Typography variant="caption" color="text.secondary">{updatedLabel}</Typography>
+          )}
+          <MuiTooltip title="Refresh now">
+            <IconButton size="small" onClick={refresh} disabled={refreshing} sx={{ border: "1px solid", borderColor: "divider" }}>
+              <RefreshIcon fontSize="small" sx={{ animation: refreshing ? "spin 1s linear infinite" : "none",
+                "@keyframes spin": { "0%": { transform: "rotate(0deg)" }, "100%": { transform: "rotate(360deg)" } } }} />
+            </IconButton>
+          </MuiTooltip>
+        </Box>
+      </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Live status across every tenant, device, and AI-generated Demand Response recommendation.
+        Live status across every tenant, device, and AI-generated Demand Response recommendation. Auto-refreshes every 30 s.
       </Typography>
 
       {error && (
@@ -95,7 +120,7 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      {/* Stat cards — CSS grid for true 5-column equal layout */}
+      {/* Stat cards */}
       <Box
         sx={{
           display: "grid",
@@ -122,7 +147,7 @@ export default function Dashboard() {
               [1, 2, 3].map((i) => <Skeleton key={i} height={48} sx={{ mb: 0.5, borderRadius: 1 }} />)
             ) : recentRecs.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                No recommendations yet. The AI engine runs on a schedule — or trigger one from the Recommendations page.
+                No recommendations yet. Trigger one from the Recommendations page.
               </Typography>
             ) : (
               recentRecs.map((r) => (
@@ -191,18 +216,13 @@ export default function Dashboard() {
                 </Box>
               </MuiTooltip>
             </Box>
-
             {feed.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                {connected
-                  ? "Waiting for telemetry events… the simulator will push readings shortly."
-                  : "Establishing WebSocket connection to telemetry stream…"}
+                {connected ? "Waiting for telemetry events…" : "Establishing WebSocket connection…"}
               </Typography>
             ) : (
               <Box sx={{ maxHeight: 260, overflowY: "auto" }}>
-                {feed.map((rec, i) => (
-                  <LiveFeedRow key={i} record={rec} />
-                ))}
+                {feed.map((rec, i) => <LiveFeedRow key={i} record={rec} />)}
               </Box>
             )}
           </Paper>
