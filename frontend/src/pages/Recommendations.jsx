@@ -349,7 +349,7 @@ export default function Recommendations() {
                   icon={<ElectricBoltIcon fontSize="small" />}
                   label={selected.event_type === "start_charging" ? "Load Increase" : "Load Reduction"}
                   value={fmt(selected.predicted_load_reduction_kw, " kW")}
-                  accent=uplightColors.blue
+                  accent={uplightColors.blue}
                 />
                 <MetricBlock
                   icon={<BoltOutlinedIcon fontSize="small" />}
