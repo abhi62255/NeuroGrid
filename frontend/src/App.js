@@ -6,6 +6,7 @@ import DeviceList from "./pages/DeviceList";
 import DeviceDetail from "./pages/DeviceDetail";
 import Recommendations from "./pages/Recommendations";
 import Events from "./pages/Events";
+import TariffCalendar from "./pages/TariffCalendar";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/devices/:id" element={<DeviceDetail />} />
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/tariff-calendar" element={<TariffCalendar />} />
         </Routes>
       </Layout>
     </BrowserRouter>

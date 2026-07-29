@@ -131,14 +131,16 @@ class SqliteTelemetryStore(TelemetryStore):
         sql = """
             SELECT payload FROM telemetry t1
             WHERE tenant_id = ?
+            AND timestamp >= datetime('now', ? || ' seconds')
             AND id = (
                 SELECT id FROM telemetry t2
                 WHERE t2.device_id = t1.device_id
+                  AND t2.tenant_id = t1.tenant_id
                 ORDER BY timestamp DESC LIMIT 1
             )
         """
         with self._lock, self._connect() as conn:
-            rows = conn.execute(sql, (tenant_id,)).fetchall()
+            rows = conn.execute(sql, (tenant_id, f"-{within_seconds}")).fetchall()
         return [json.loads(r["payload"]) for r in rows]
 
 

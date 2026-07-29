@@ -1,3 +1,42 @@
+# Environment / secrets
 .env
+*.env.*
+!*.env.example
+
+# Python
 __pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+*.egg
+dist/
+.pytest_cache/
+
+# Virtual environments — never commit these
+venv/
+.venv/
+.venv_mac/
+.venv_win/
+env/
+ENV/
+
+# SQLite databases — use migrations/seed scripts instead
+*.db
+*.sqlite3
+
+# Node / React
 node_modules/
+build/
+.npm/
+
+# macOS
+.DS_Store
+
+# Logs
+nohup.out
+*.log
+
+# IDEs
+.vscode/
+.idea/

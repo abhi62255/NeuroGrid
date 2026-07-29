@@ -40,6 +40,7 @@ class SimulatedDevice:
     device_id: int
     tenant_id: int
     battery_capacity_kwh: float
+    interval_seconds: int = 45
     soc: float = field(default_factory=lambda: random.uniform(20, 90))
     state: str = "idle"
     charging_power_kw: float = 0.0
@@ -49,7 +50,7 @@ class SimulatedDevice:
 
         if self.state == "charging":
             self.charging_power_kw = max(1.0, random.gauss(7.2, 1.5 * (1 + randomness)))
-            energy_delta = self.charging_power_kw * (self._interval_hours())
+            energy_delta = self.charging_power_kw * self._interval_hours()
             self.soc = min(100.0, self.soc + (energy_delta / self.battery_capacity_kwh) * 100)
         elif self.state == "driving":
             self.charging_power_kw = 0.0
@@ -65,7 +66,7 @@ class SimulatedDevice:
         return self
 
     def _interval_hours(self) -> float:
-        return 45 / 3600  # approximate simulator tick length in hours
+        return self.interval_seconds / 3600
 
     def to_telemetry(self) -> Dict:
         now = datetime.utcnow()
@@ -163,7 +164,12 @@ def run_forever(tenant_uid: str, device_count: int, interval_seconds: int, rando
         db.close()
 
     sim_devices = [
-        SimulatedDevice(device_id=d.id, tenant_id=d.tenant_id, battery_capacity_kwh=d.battery_capacity_kwh or 60)
+        SimulatedDevice(
+            device_id=d.id,
+            tenant_id=d.tenant_id,
+            battery_capacity_kwh=d.battery_capacity_kwh or 60,
+            interval_seconds=interval_seconds,
+        )
         for d in devices
     ]
 
