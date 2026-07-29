@@ -32,7 +32,7 @@ async def telemetry_ws(websocket: WebSocket, tenant_uid: str) -> None:
     # ── Validate tenant ────────────────────────────────────────────────────
     db = SessionLocal()
     try:
-        tenant = db.query(Tenant).filter(Tenant.uid == tenant_uid).first()
+        tenant = db.query(Tenant).filter(Tenant.tenant_uid == tenant_uid).first()
         if not tenant:
             await websocket.close(code=4004, reason="Tenant not found")
             return
