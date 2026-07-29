@@ -2,27 +2,50 @@
 Standalone entrypoint for the EV telemetry simulator.
 
 Usage:
-    python run_simulator.py
-    python run_simulator.py --devices 500 --interval 30 --tenant demo-utility --randomness 0.4
+    # Direct DB write (no WebSocket push):
+    python run_simulator.py --tenant demo-utility --devices 10 --interval 30
 
-Configurable via CLI flags or the SIM_* environment variables in .env.
+    # Via API (WebSocket live feed updates in real time):
+    python run_simulator.py --tenant demo-utility --devices 10 --interval 30 \
+                            --api-url http://localhost:8001
+
+    # All options:
+    python run_simulator.py --help
 """
 
 import argparse
+import os
 
 from app.config import settings
 from app.services.simulator import run_forever
 
 
 def main():
-    parser = argparse.ArgumentParser(description="EV telemetry simulator")
-    parser.add_argument("--tenant", default=settings.SIM_TENANT_UID, help="Tenant UID to simulate devices for")
-    parser.add_argument("--devices", type=int, default=settings.SIM_DEVICE_COUNT, help="Number of EVs to simulate")
+    parser = argparse.ArgumentParser(description="NeuroGrid EV telemetry simulator")
     parser.add_argument(
-        "--interval", type=int, default=settings.SIM_INTERVAL_SECONDS, help="Seconds between telemetry ticks"
+        "--tenant", default=settings.SIM_TENANT_UID,
+        help="Tenant UID to simulate devices for",
     )
     parser.add_argument(
-        "--randomness", type=float, default=settings.SIM_RANDOMNESS, help="0.0 (deterministic) - 1.0 (very noisy)"
+        "--devices", type=int, default=settings.SIM_DEVICE_COUNT,
+        help="Number of EVs to simulate",
+    )
+    parser.add_argument(
+        "--interval", type=int, default=settings.SIM_INTERVAL_SECONDS,
+        help="Seconds between telemetry ticks",
+    )
+    parser.add_argument(
+        "--randomness", type=float, default=settings.SIM_RANDOMNESS,
+        help="0.0 = deterministic patterns, 1.0 = very noisy",
+    )
+    parser.add_argument(
+        "--api-url",
+        default=os.environ.get("SIM_API_URL"),
+        help=(
+            "If set, POST telemetry to this API base URL (e.g. http://localhost:8001) "
+            "so WebSocket clients receive live updates. "
+            "If omitted, writes directly to the telemetry store."
+        ),
     )
     args = parser.parse_args()
 
@@ -31,6 +54,7 @@ def main():
         device_count=args.devices,
         interval_seconds=args.interval,
         randomness=args.randomness,
+        api_url=args.api_url,
     )
 
 

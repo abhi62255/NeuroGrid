@@ -36,7 +36,7 @@ async def receive_telemetry(payload: TelemetryIn, db: Session = Depends(get_db))
     # Push to any WebSocket clients watching this tenant
     tenant = db.get(Tenant, payload.tenant_id)
     if tenant:
-        await manager.broadcast(tenant.uid, "telemetry", record)
+        await manager.broadcast(tenant.tenant_uid, "telemetry", record)
 
     return record
 
