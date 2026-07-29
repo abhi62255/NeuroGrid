@@ -8,7 +8,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.config import settings
 from app.database import Base, engine, SessionLocal
 from app import models  # noqa: F401  (registers all models on Base.metadata)
-from app.routers import tenants, users, devices, telemetry, recommendations, events, tariffs, dashboard
+from app.routers import tenants, users, devices, telemetry, recommendations, events, tariffs, dashboard, ws
 from app.services.ai_engine import generate_recommendation
 from app.models.tenant import Tenant
 
@@ -84,6 +84,7 @@ app.include_router(recommendations.router)
 app.include_router(events.router)
 app.include_router(tariffs.router)
 app.include_router(dashboard.router)
+app.include_router(ws.router)
 
 
 @app.get("/api/health")

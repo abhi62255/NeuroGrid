@@ -16,16 +16,18 @@ import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import EvStationOutlinedIcon from "@mui/icons-material/EvStationOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlined";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import EnergySavingsLeafOutlinedIcon from "@mui/icons-material/EnergySavingsLeafOutlined";
 import { uplightColors } from "../theme";
 
 const DRAWER_WIDTH = 240;
 
 const NAV_ITEMS = [
-  { label: "Dashboard", path: "/", icon: <DashboardOutlinedIcon /> },
-  { label: "Devices", path: "/devices", icon: <EvStationOutlinedIcon /> },
-  { label: "Recommendations", path: "/recommendations", icon: <BoltOutlinedIcon /> },
-  { label: "Events", path: "/events", icon: <EventAvailableOutlinedIcon /> },
+  { label: "Dashboard",       path: "/",                 icon: <DashboardOutlinedIcon /> },
+  { label: "Devices",         path: "/devices",          icon: <EvStationOutlinedIcon /> },
+  { label: "Recommendations", path: "/recommendations",  icon: <BoltOutlinedIcon /> },
+  { label: "Events",          path: "/events",           icon: <EventAvailableOutlinedIcon /> },
+  { label: "Tariff Calendar", path: "/tariff-calendar",  icon: <CalendarMonthOutlinedIcon /> },
 ];
 
 export default function Layout({ children }) {

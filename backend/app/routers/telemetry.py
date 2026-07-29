@@ -6,20 +6,22 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.device import Device
+from app.models.tenant import Tenant
 from app.schemas.telemetry import TelemetryIn, TelemetryOut
 from app.services.telemetry_store import get_telemetry_store
+from app.services.ws_manager import manager
 
 router = APIRouter(prefix="/api/telemetry", tags=["Telemetry"])
 
 
 @router.post("", response_model=TelemetryOut)
-def receive_telemetry(payload: TelemetryIn, db: Session = Depends(get_db)):
+async def receive_telemetry(payload: TelemetryIn, db: Session = Depends(get_db)):
     store = get_telemetry_store()
     record = payload.model_dump()
     record["timestamp"] = record["timestamp"] or datetime.utcnow()
     store.write(record)
 
-    # keep the device row's "latest state" cache in sync
+    # Keep device row's "latest state" cache in sync
     db.query(Device).filter(Device.id == payload.device_id).update(
         {
             Device.current_soc: payload.soc,
@@ -30,6 +32,12 @@ def receive_telemetry(payload: TelemetryIn, db: Session = Depends(get_db)):
         }
     )
     db.commit()
+
+    # Push to any WebSocket clients watching this tenant
+    tenant = db.get(Tenant, payload.tenant_id)
+    if tenant:
+        await manager.broadcast(tenant.uid, "telemetry", record)
+
     return record
 
 
@@ -43,3 +51,4 @@ def query_telemetry(
 ):
     store = get_telemetry_store()
     return store.query(device_id=device_id, tenant_id=tenant_id, start=start, end=end, limit=limit)
+

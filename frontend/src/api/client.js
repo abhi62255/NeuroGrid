@@ -37,6 +37,7 @@ export const EventAPI = {
 
 export const TariffAPI = {
   current: (tenantId) => client.get(`/tariffs/current/${tenantId}`),
+  calendar: (tenantId) => client.get(`/tariffs/calendar/${tenantId}`),
 };
 
 export default client;
