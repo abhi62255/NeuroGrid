@@ -6,11 +6,24 @@
 
 const UTC_OPTS = { timeZone: "UTC" };
 
+/**
+ * Parse a datetime string as UTC.
+ * FastAPI serialises naive datetimes without a 'Z' suffix, so browsers
+ * interpret them as local time.  Append 'Z' when no timezone is present.
+ */
+function toUtcDate(dt) {
+  if (!dt) return null;
+  const s = String(dt);
+  // Already has timezone info (Z or +HH:MM)
+  if (s.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(s)) return new Date(s);
+  return new Date(s + "Z");
+}
+
 /** "Jul 29, 2026, 14:32 UTC" */
 export function fmtUtcDateTime(dt) {
   if (!dt) return "—";
   return (
-    new Date(dt).toLocaleString("en-US", {
+    toUtcDate(dt).toLocaleString("en-US", {
       ...UTC_OPTS,
       year: "numeric",
       month: "short",
@@ -26,7 +39,7 @@ export function fmtUtcDateTime(dt) {
 export function fmtUtcTime(dt) {
   if (!dt) return "—";
   return (
-    new Date(dt).toLocaleString("en-US", {
+    toUtcDate(dt).toLocaleString("en-US", {
       ...UTC_OPTS,
       hour: "2-digit",
       minute: "2-digit",
@@ -40,7 +53,7 @@ export function fmtUtcTime(dt) {
 export function fmtUtcShort(dt) {
   if (!dt) return "—";
   return (
-    new Date(dt).toLocaleString("en-US", {
+    toUtcDate(dt).toLocaleString("en-US", {
       ...UTC_OPTS,
       month: "short",
       day: "numeric",
