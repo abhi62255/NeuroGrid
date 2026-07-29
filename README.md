@@ -69,20 +69,47 @@ npm start                     # Opens http://localhost:3000
 
 ### 3 · Telemetry Simulators (optional)
 
-Run a simulated EV fleet for each tenant to generate live telemetry:
+Run a simulated EV fleet for each tenant to generate live telemetry.
 
 ```bash
 cd backend
 source .venv/bin/activate
 
-# List tenants
-curl http://localhost:8000/api/tenants/
-
-# Start a simulator per tenant (replace <uid> with actual tenant UIDs)
-PYTHONUNBUFFERED=1 python run_simulator.py --tenant-uid demo-utility    --num-evs 10 --interval 60 &
-PYTHONUNBUFFERED=1 python run_simulator.py --tenant-uid pacific-power    --num-evs 5  --interval 60 &
-PYTHONUNBUFFERED=1 python run_simulator.py --tenant-uid midwest-energy   --num-evs 3  --interval 60 &
+# List tenant UIDs to pass to --tenant
+curl http://localhost:8000/api/tenants/ | python3 -m json.tool
 ```
+
+**Recommended — API mode** (enables WebSocket live feed on the Dashboard):
+
+```bash
+# Each simulator POSTs to the API, which triggers WebSocket broadcasts in real time
+PYTHONUNBUFFERED=1 python run_simulator.py \
+  --tenant demo-utility --devices 10 --interval 15 --api-url http://localhost:8000 &
+
+PYTHONUNBUFFERED=1 python run_simulator.py \
+  --tenant pacific-power --devices 5 --interval 15 --api-url http://localhost:8000 &
+
+PYTHONUNBUFFERED=1 python run_simulator.py \
+  --tenant midwest-energy --devices 3 --interval 15 --api-url http://localhost:8000 &
+```
+
+**Direct DB mode** (faster, but Dashboard live feed won't update):
+
+```bash
+PYTHONUNBUFFERED=1 python run_simulator.py --tenant demo-utility --devices 10 --interval 30 &
+```
+
+**Simulator options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--tenant` | `demo-utility` | Tenant UID to simulate devices for |
+| `--devices` | `10` | Number of EVs to simulate |
+| `--interval` | `45` | Seconds between telemetry ticks |
+| `--randomness` | `0.3` | `0.0` = deterministic · `1.0` = very noisy |
+| `--api-url` | *(none)* | If set, POST to API (enables WebSocket push); otherwise writes directly to DB |
+
+> **Note:** The simulator uses a time-of-day aware state machine — EVs naturally commute in the morning, idle at work during the day, and charge overnight.
 
 ---
 
