@@ -39,6 +39,15 @@ def main():
         help="0.0 = deterministic patterns, 1.0 = very noisy",
     )
     parser.add_argument(
+        "--pinned", type=int, default=0,
+        help=(
+            "Number of devices to pin as always-plugged-in (DR-eligible). "
+            "Pinned EVs never drive — they cycle between charging and idle, "
+            "making them permanently available for Demand Response events. "
+            "Must be ≤ --devices."
+        ),
+    )
+    parser.add_argument(
         "--api-url",
         default=os.environ.get("SIM_API_URL"),
         help=(
@@ -55,6 +64,7 @@ def main():
         interval_seconds=args.interval,
         randomness=args.randomness,
         api_url=args.api_url,
+        pinned_count=min(args.pinned, args.devices),
     )
 
 
