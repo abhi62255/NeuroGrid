@@ -131,7 +131,7 @@ def tariff_calendar(tenant_id: int, db: Session = Depends(get_db)):
         "timezone": tariff.timezone,
         "currency": tariff.currency,
         "num_devices": len(devices),
-        "current_hour": dt.datetime.now().hour,
+        "current_hour": dt.datetime.now(dt.timezone.utc).hour,
         "rates": rates,
         "windows": windows,
         "incentive_per_kwh": tariff.incentive_per_kwh,

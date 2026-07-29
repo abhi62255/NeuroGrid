@@ -106,6 +106,9 @@ class SimulatedDevice:
     state: str = "idle"
     charging_power_kw: float = 0.0
 
+    # When True: device never drives/unplugs — always plugged in (DR-eligible)
+    pinned: bool = False
+
     # Stable home location assigned once at construction
     home_lat: float = field(default_factory=lambda: random.uniform(33.0, 47.0))
     home_lon: float = field(default_factory=lambda: random.uniform(-122.0, -75.0))
@@ -127,7 +130,23 @@ class SimulatedDevice:
         if hour is None:
             hour = datetime.utcnow().hour
         prev_state = self.state
-        self.state = _next_state(self.state, randomness, hour)
+
+        if self.pinned:
+            # Pinned devices stay plugged in: only cycle between charging and idle.
+            # When SOC reaches 100% → idle (completed). When idle and SOC drops → charging.
+            if self.soc >= 99.5:
+                self.state = "idle"
+            elif self.soc < 30 or self.state not in ("charging", "idle", "completed"):
+                self.state = "charging"
+            else:
+                # Gently oscillate: mostly charging until ~90%, then idle
+                if self.state == "charging" and self.soc >= 90:
+                    self.state = random.choice(["charging", "idle"])
+                elif self.state == "idle" and self.soc < 70:
+                    self.state = "charging"
+                # else: keep current state
+        else:
+            self.state = _next_state(self.state, randomness, hour)
 
         # Reset session energy on unplug
         if prev_state in ("charging", "idle", "completed") and self.state in ("driving", "unplugged"):
@@ -255,26 +274,65 @@ def ensure_simulated_fleet(db: Session, tenant_uid: str, device_count: int) -> L
     return db.query(Device).filter(Device.tenant_id == tenant.id).all()
 
 
-def _build_sim_devices(devices: List[Device], interval_seconds: int) -> List[SimulatedDevice]:
-    """Instantiate SimulatedDevice objects from ORM Device rows."""
-    # Max charging power varies by model; approximate from battery capacity
-    def _max_power(cap_kwh: float) -> float:
-        if cap_kwh >= 82:   return 11.5   # high-end (three-phase / DC capable)
-        if cap_kwh >= 60:   return 7.2    # standard L2
-        return 3.7                          # basic L2
+def _build_sim_devices(
+    devices: List[Device], interval_seconds: int, pinned_count: int = 0
+) -> List[SimulatedDevice]:
+    """Instantiate SimulatedDevice objects from ORM Device rows.
 
-    return [
-        SimulatedDevice(
+    *pinned_count* devices are flagged as grid-pinned (always plugged in,
+    DR-eligible). Selection is deterministic: the devices with the lowest
+    device IDs are pinned, so the same devices are always chosen regardless
+    of restart order or list ordering.
+    """
+    def _max_power(cap_kwh: float) -> float:
+        if cap_kwh >= 82:   return 11.5
+        if cap_kwh >= 60:   return 7.2
+        return 3.7
+
+    hour = datetime.now().hour
+    if hour in range(0, 6) or hour in range(17, 24):
+        default_state_pool = ["charging"] * 5 + ["idle"] * 3 + ["unplugged"] * 2
+    elif hour in range(6, 10):
+        default_state_pool = ["driving"] * 5 + ["unplugged"] * 3 + ["idle"] * 2
+    else:
+        default_state_pool = ["driving"] * 4 + ["idle"] * 3 + ["unplugged"] * 3
+
+    # Pin the devices with the N smallest IDs — stable across restarts
+    sorted_ids = sorted(d.id for d in devices)
+    pinned_ids = set(sorted_ids[:pinned_count]) if pinned_count > 0 else set()
+
+    result = []
+    for d in devices:
+        stored_soc = d.current_soc
+        is_pinned = d.id in pinned_ids
+
+        if stored_soc is None or stored_soc <= 5.0:
+            soc = random.uniform(20, 85)
+        else:
+            soc = stored_soc
+
+        if is_pinned:
+            # Pinned: always start in charging or idle with a mid-range SOC
+            soc = soc if soc > 10 else random.uniform(20, 70)
+            state = "charging" if soc < 90 else "idle"
+        else:
+            stored_state = str(d.charging_status.value) if d.charging_status else "idle"
+            if stored_state == "unplugged" and (stored_soc is None or stored_soc <= 5.0):
+                state = random.choice(default_state_pool)
+            else:
+                state = stored_state
+
+        result.append(SimulatedDevice(
             device_id=d.id,
             tenant_id=d.tenant_id,
             battery_capacity_kwh=d.battery_capacity_kwh or 60.0,
             max_charging_power_kw=_max_power(d.battery_capacity_kwh or 60.0),
             interval_seconds=interval_seconds,
-            soc=d.current_soc or random.uniform(20, 90),
-            state=str(d.charging_status.value) if d.charging_status else "idle",
-        )
-        for d in devices
-    ]
+            soc=soc,
+            state=state,
+            pinned=is_pinned,
+        ))
+    return result
 
 
 # ── Tick / run_forever ───────────────────────────────────────────────────────
@@ -343,6 +401,7 @@ def run_forever(
     interval_seconds: int,
     randomness: float,
     api_url: Optional[str] = None,
+    pinned_count: int = 0,
 ):
     db = SessionLocal()
     try:
@@ -350,12 +409,14 @@ def run_forever(
     finally:
         db.close()
 
-    sim_devices = _build_sim_devices(devices, interval_seconds)
+    sim_devices = _build_sim_devices(devices, interval_seconds, pinned_count=pinned_count)
 
+    pinned = sum(1 for s in sim_devices if s.pinned)
     mode = f"via API → {api_url}" if api_url else "direct DB write"
     print(
-        f"[simulator] {len(sim_devices)} EVs | tenant={tenant_uid!r} | "
-        f"interval={interval_seconds}s | randomness={randomness} | mode={mode}"
+        f"[simulator] {len(sim_devices)} EVs ({pinned} grid-pinned) | "
+        f"tenant={tenant_uid!r} | interval={interval_seconds}s | "
+        f"randomness={randomness} | mode={mode}"
     )
 
     while True:
@@ -364,9 +425,10 @@ def run_forever(
         elapsed = time_module.time() - start
         charging = sum(1 for s in sim_devices if s.state == "charging")
         driving  = sum(1 for s in sim_devices if s.state == "driving")
+        pinned_charging = sum(1 for s in sim_devices if s.pinned and s.state == "charging")
         print(
             f"[simulator] tick {len(sim_devices)} devices in {elapsed:.2f}s | "
-            f"charging={charging} driving={driving} "
+            f"charging={charging} (pinned={pinned_charging}) driving={driving} "
             f"avg_soc={sum(s.soc for s in sim_devices) / len(sim_devices):.1f}%"
         )
         time_module.sleep(max(1.0, interval_seconds - elapsed))

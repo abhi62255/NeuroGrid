@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,8 @@ from app import models  # noqa: F401  (registers all models on Base.metadata)
 from app.routers import tenants, users, devices, telemetry, recommendations, events, tariffs, dashboard, ws
 from app.services.ai_engine import generate_recommendation
 from app.models.tenant import Tenant
+from app.models.event import Event, EventStatus
+from app.models.recommendation import Recommendation, RecommendationStatus
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("dr_system")
@@ -38,6 +41,64 @@ def run_recommendation_cycle():
             db.close()
 
 
+def run_status_sweep():
+    """Scheduled job: auto-transition events based on UTC time.
+
+    scheduled → active  when start_time has passed
+    active    → completed when end_time has passed
+    Also expires pending recommendations whose window has fully passed.
+    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC for DB comparison
+    db = SessionLocal()
+    try:
+        # scheduled → active: start_time passed but end_time not yet
+        to_activate = (
+            db.query(Event)
+            .filter(
+                Event.event_status == EventStatus.scheduled,
+                Event.start_time <= now,
+                Event.end_time > now,
+            )
+            .all()
+        )
+        for ev in to_activate:
+            ev.event_status = EventStatus.active
+            logger.info("Auto-activated event %s (start_time %s UTC)", ev.event_id, ev.start_time)
+
+        # active → completed: end_time has passed
+        to_complete = (
+            db.query(Event)
+            .filter(
+                Event.event_status.in_([EventStatus.active, EventStatus.scheduled]),
+                Event.end_time <= now,
+            )
+            .all()
+        )
+        for ev in to_complete:
+            ev.event_status = EventStatus.completed
+            logger.info("Auto-completed event %s (end_time %s UTC)", ev.event_id, ev.end_time)
+
+        # Expire pending recommendations whose window is fully in the past
+        expired_recs = (
+            db.query(Recommendation)
+            .filter(
+                Recommendation.recommendation_status == RecommendationStatus.pending,
+                Recommendation.recommended_end < now,
+            )
+            .all()
+        )
+        for rec in expired_recs:
+            rec.recommendation_status = RecommendationStatus.expired
+            logger.info("Expired recommendation %s (window ended %s UTC)", rec.recommendation_id, rec.recommended_end)
+
+        if to_activate or to_complete or expired_recs:
+            db.commit()
+    except Exception:
+        logger.exception("Status sweep failed")
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ────────────────────────────────────────────────────────────
@@ -49,9 +110,18 @@ async def lifespan(app: FastAPI):
         id="recommendation_cycle",
         replace_existing=True,
     )
+    # Status sweep every 60s: scheduled→active→completed based on UTC time
+    scheduler.add_job(
+        run_status_sweep,
+        "interval",
+        seconds=60,
+        id="status_sweep",
+        replace_existing=True,
+    )
     scheduler.start()
+    run_status_sweep()  # immediate sweep on startup
     logger.info(
-        "Startup complete. Recommendation engine running every %ss",
+        "Startup complete. Recommendation engine every %ss. Status sweep every 60s.",
         settings.RECOMMENDATION_INTERVAL_SECONDS,
     )
 

@@ -40,19 +40,22 @@ telemetry (including battery SOC, min_soc, max_soc, and departure times), the ut
 program constraints. Decide whether a Demand Response event should be recommended right now.
 
 An event can be one of two types:
-1. "stop_charging" (Demand Response / Curtailment): Recommending that targeted EVs stop charging to reduce grid load.
-   - Recommending these events during On-Peak (expensive) pricing periods.
-   - Only target devices that are currently charging and plugged in at home, where their current SOC is strictly ABOVE their min_soc. If a device's current SOC is below its min_soc, it must be allowed to charge and NOT be curtailed.
-2. "start_charging" (Smart Charging): Recommending that targeted EVs start charging.
-   - Recommending these events during Off-Peak (cheap) pricing periods, OR when a device's current SOC is below its min_soc (regardless of peak period, to ensure user has minimum charge), OR depending on when they have to go (if they need to charge to reach their max_soc before the estimated_departure_time).
-   - Only target devices that are plugged in at home but not currently charging (or charging below capability), whose current SOC is below their max_soc.
+1. "stop_charging" (Demand Response / Curtailment): Recommend that targeted EVs stop or reduce charging to lower grid load.
+   - Recommend during On-Peak OR Mid-Peak pricing periods (both represent elevated grid stress and cost).
+   - Only target devices that are currently charging and plugged in at home, where their current SOC is strictly ABOVE their min_soc.
+   - If total_available_flexibility_kw >= min_required_load_reduction_kw * 0.8, a stop_charging event is viable
+     (use 80% of min threshold to account for partial participation).
+2. "start_charging" (Smart Charging): Recommend that targeted EVs begin or increase charging.
+   - Recommend during Off-Peak or Super-Off-Peak periods (cheap, low-demand windows).
+   - Also recommend if any device's current SOC is below its min_soc regardless of period (safety top-up).
+   - Only target devices plugged in at home but not currently charging (or charging below capability), whose SOC is below their max_soc.
 
 Constraints:
-- Respect max_event_duration_minutes and min_required_load_reduction_kw (for stop_charging events).
+- Respect max_event_duration_minutes.
 - Be conservative with confidence when data is sparse.
+- Even a mid_peak curtailment with 0.7 confidence is valuable — do not over-restrict.
 
-Respond with ONLY a single JSON object (no markdown, no prose) matching
-exactly this shape:
+Respond with ONLY a single JSON object (no markdown, no prose) matching exactly this shape:
 {
   "recommend_event": boolean,
   "event_type": "stop_charging" | "start_charging",

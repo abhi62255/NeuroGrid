@@ -33,16 +33,14 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import { RecommendationAPI, TenantAPI } from "../api/client";
 import StatusChip from "../components/StatusChip";
 import { uplightColors } from "../theme";
+import { fmtUtcShort, fmtUtcTime } from "../utils/time";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const fmt = (val, suffix = "") =>
   val != null ? `${typeof val === "number" ? val.toLocaleString(undefined, { maximumFractionDigits: 2 }) : val}${suffix}` : "—";
 
-const fmtDate = (dt) =>
-  dt ? new Date(dt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
-
-const fmtTime = (dt) =>
-  dt ? new Date(dt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "—";
+const fmtDate = (dt) => fmtUtcShort(dt);
+const fmtTime = (dt) => fmtUtcTime(dt);
 
 // ── MetricBlock ───────────────────────────────────────────────────────────────
 function MetricBlock({ icon, label, value, accent }) {

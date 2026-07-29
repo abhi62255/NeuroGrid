@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Box,
@@ -12,6 +12,7 @@ import {
   AppBar,
   Divider,
 } from "@mui/material";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import EvStationOutlinedIcon from "@mui/icons-material/EvStationOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
@@ -32,6 +33,12 @@ const NAV_ITEMS = [
 
 export default function Layout({ children }) {
   const location = useLocation();
+  const [utcTime, setUtcTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setUtcTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
@@ -95,47 +102,91 @@ export default function Layout({ children }) {
         }}
       >
         <Toolbar sx={{ minHeight: 60 }} />
-        <Box sx={{ overflow: "auto", pt: 1.5, pb: 2 }}>
-          <Typography
-            variant="overline"
-            sx={{ px: 3, color: "rgba(200,216,232,0.55)", fontSize: 10, display: "block", mb: 1 }}
+        <Box sx={{ display: "flex", flexDirection: "column", height: "calc(100% - 60px)" }}>
+          <Box sx={{ overflow: "auto", pt: 1.5, pb: 2, flexGrow: 1 }}>
+            <Typography
+              variant="overline"
+              sx={{ px: 3, color: "rgba(200,216,232,0.55)", fontSize: 10, display: "block", mb: 1 }}
+            >
+              Navigation
+            </Typography>
+            <List disablePadding>
+              {NAV_ITEMS.map((item) => {
+                const selected = location.pathname === item.path;
+                return (
+                  <ListItemButton
+                    key={item.path}
+                    component={Link}
+                    to={item.path}
+                    selected={selected}
+                    sx={{
+                      mx: 1.5,
+                      mb: 0.5,
+                      borderRadius: 1.5,
+                      color: selected ? "#fff" : "rgba(200,216,232,0.8)",
+                      bgcolor: selected ? uplightColors.blue : "transparent",
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: "inherit", minWidth: 36 }}>{item.icon}</ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{ fontWeight: 600, fontSize: 14 }}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+            <Divider sx={{ borderColor: "rgba(255,255,255,0.08)", my: 2, mx: 2 }} />
+            <Box sx={{ px: 3 }}>
+              <Typography variant="caption" sx={{ color: "rgba(200,216,232,0.4)", fontSize: 11, display: "block", lineHeight: 1.6 }}>
+                AI-powered demand response
+              </Typography>
+              <Typography variant="caption" sx={{ color: "rgba(200,216,232,0.4)", fontSize: 11, display: "block" }}>
+                Device-agnostic · EV adapter active
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* UTC clock pinned to drawer bottom */}
+          <Box
+            sx={{
+              px: 2,
+              py: 1.5,
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
           >
-            Navigation
-          </Typography>
-          <List disablePadding>
-            {NAV_ITEMS.map((item) => {
-              const selected = location.pathname === item.path;
-              return (
-                <ListItemButton
-                  key={item.path}
-                  component={Link}
-                  to={item.path}
-                  selected={selected}
-                  sx={{
-                    mx: 1.5,
-                    mb: 0.5,
-                    borderRadius: 1.5,
-                    color: selected ? "#fff" : "rgba(200,216,232,0.8)",
-                    bgcolor: selected ? uplightColors.blue : "transparent",
-                  }}
-                >
-                  <ListItemIcon sx={{ color: "inherit", minWidth: 36 }}>{item.icon}</ListItemIcon>
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{ fontWeight: 600, fontSize: 14 }}
-                  />
-                </ListItemButton>
-              );
-            })}
-          </List>
-          <Divider sx={{ borderColor: "rgba(255,255,255,0.08)", my: 2, mx: 2 }} />
-          <Box sx={{ px: 3 }}>
-            <Typography variant="caption" sx={{ color: "rgba(200,216,232,0.4)", fontSize: 11, display: "block", lineHeight: 1.6 }}>
-              AI-powered demand response
-            </Typography>
-            <Typography variant="caption" sx={{ color: "rgba(200,216,232,0.4)", fontSize: 11, display: "block" }}>
-              Device-agnostic · EV adapter active
-            </Typography>
+            <AccessTimeIcon sx={{ fontSize: 15, color: uplightColors.green, flexShrink: 0 }} />
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  fontVariantNumeric: "tabular-nums",
+                  color: "#fff",
+                  letterSpacing: "0.03em",
+                  lineHeight: 1.2,
+                }}
+              >
+                {utcTime.toLocaleTimeString("en-US", {
+                  timeZone: "UTC",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: false,
+                })}
+              </Typography>
+              <Typography sx={{ fontSize: 10, color: "rgba(200,216,232,0.45)", letterSpacing: "0.06em" }}>
+                {utcTime.toLocaleDateString("en-US", {
+                  timeZone: "UTC",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })} · UTC
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Drawer>

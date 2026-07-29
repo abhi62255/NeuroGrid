@@ -12,6 +12,7 @@ class EventStatus(str, enum.Enum):
     active = "active"
     completed = "completed"
     cancelled = "cancelled"
+    expired = "expired"
 
 
 class TriggerSource(str, enum.Enum):

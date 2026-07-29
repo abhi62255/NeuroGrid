@@ -33,6 +33,7 @@ export const RecommendationAPI = {
 export const EventAPI = {
   list: (params) => client.get("/events", { params }),
   get: (id) => client.get(`/events/${id}`),
+  cancel: (id) => client.post(`/events/${id}/cancel`),
 };
 
 export const TariffAPI = {
