@@ -134,7 +134,7 @@ export default function TariffCalendar() {
   }, [calendar, drWindow]);
 
   const groups = calendar ? groupPeriods(calendar.windows) : [];
-  const nowHour = calendar?.current_hour ?? new Date().getHours();
+  const nowHour = calendar?.current_hour ?? new Date().getUTCHours();
 
   return (
     <Box>
