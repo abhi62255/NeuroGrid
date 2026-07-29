@@ -68,7 +68,7 @@ def cancel_event(event_id: int, db: Session = Depends(get_db)):
     event = db.get(Event, event_id)
     if not event:
         raise HTTPException(404, "Event not found")
-    if event.event_status in (EventStatus.completed, EventStatus.cancelled):
+    if event.event_status in (EventStatus.completed, EventStatus.cancelled, EventStatus.expired):
         raise HTTPException(400, f"Event is already '{event.event_status}'")
     event.event_status = EventStatus.cancelled
     db.commit()

@@ -11,6 +11,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import { DashboardAPI, RecommendationAPI, EventAPI, TenantAPI } from "../api/client";
 import { useTelemetrySocket } from "../hooks/useTelemetrySocket";
 import { useAutoRefresh, useRelativeTime } from "../hooks/useAutoRefresh";
+import { fmtUtcTime, fmtUtcShort } from "../utils/time";
 import StatCard from "../components/StatCard";
 import StatusChip from "../components/StatusChip";
 import { uplightColors } from "../theme";
@@ -22,7 +23,7 @@ const CHARGING_COLOR = {
 };
 
 function LiveFeedRow({ record }) {
-  const ts = record.timestamp ? new Date(record.timestamp).toLocaleTimeString() : "—";
+  const ts = record.timestamp ? fmtUtcTime(record.timestamp) : "—";
   const color = CHARGING_COLOR[record.charging_status] ?? "#aaa";
   return (
     <Box
@@ -190,7 +191,7 @@ export default function Dashboard() {
                       </Typography>
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(e.start_time).toLocaleString()} · {e.trigger_source}
+                      {fmtUtcShort(e.start_time)} · {e.trigger_source}
                     </Typography>
                   </Box>
                   <StatusChip status={e.event_status} />

@@ -12,6 +12,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { DeviceAPI, TelemetryAPI } from "../api/client";
 import StatusChip from "../components/StatusChip";
+import { fmtUtcTime } from "../utils/time";
 
 export default function DeviceDetail() {
   const { id } = useParams();
@@ -26,7 +27,7 @@ export default function DeviceDetail() {
   }, [id]);
 
   const chartData = telemetry.map((t) => ({
-    time: new Date(t.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    time: fmtUtcTime(t.timestamp),
     soc: t.soc,
     power: t.charging_power_kw,
   }));

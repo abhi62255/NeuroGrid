@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,8 @@ from app import models  # noqa: F401  (registers all models on Base.metadata)
 from app.routers import tenants, users, devices, telemetry, recommendations, events, tariffs, dashboard, ws
 from app.services.ai_engine import generate_recommendation
 from app.models.tenant import Tenant
+from app.models.event import Event, EventStatus
+from app.models.recommendation import Recommendation, RecommendationStatus
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("dr_system")
@@ -38,6 +41,45 @@ def run_recommendation_cycle():
             db.close()
 
 
+def run_expiry_sweep():
+    """Scheduled job: mark stale recommendations and past-window events as expired (UTC)."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC for DB comparison
+    db = SessionLocal()
+    try:
+        # Expire pending recommendations whose entire window is in the past
+        expired_recs = (
+            db.query(Recommendation)
+            .filter(
+                Recommendation.recommendation_status == RecommendationStatus.pending,
+                Recommendation.recommended_end < now,
+            )
+            .all()
+        )
+        for rec in expired_recs:
+            rec.recommendation_status = RecommendationStatus.expired
+            logger.info("Expired recommendation %s (window ended %s UTC)", rec.recommendation_id, rec.recommended_end)
+
+        # Expire scheduled/active events whose end_time has passed
+        expired_events = (
+            db.query(Event)
+            .filter(
+                Event.event_status.in_([EventStatus.scheduled, EventStatus.active]),
+                Event.end_time < now,
+            )
+            .all()
+        )
+        for ev in expired_events:
+            ev.event_status = EventStatus.expired
+            logger.info("Expired event %s (end_time %s UTC)", ev.event_id, ev.end_time)
+
+        if expired_recs or expired_events:
+            db.commit()
+    except Exception:
+        logger.exception("Expiry sweep failed")
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ────────────────────────────────────────────────────────────
@@ -49,9 +91,19 @@ async def lifespan(app: FastAPI):
         id="recommendation_cycle",
         replace_existing=True,
     )
+    # Expiry sweep runs every 2 minutes
+    scheduler.add_job(
+        run_expiry_sweep,
+        "interval",
+        seconds=120,
+        id="expiry_sweep",
+        replace_existing=True,
+    )
     scheduler.start()
+    # Run an immediate sweep on startup to catch anything already expired
+    run_expiry_sweep()
     logger.info(
-        "Startup complete. Recommendation engine running every %ss",
+        "Startup complete. Recommendation engine every %ss. Expiry sweep every 120s.",
         settings.RECOMMENDATION_INTERVAL_SECONDS,
     )
 

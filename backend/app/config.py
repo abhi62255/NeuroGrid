@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
-    AI_MODEL: str = "gemini-2.5-flash"
+    AI_MODEL: str = "gemini-3.5-flash-lite"
 
     # Relational Database URL (e.g. sqlite:///./main.db)
     DATABASE_URL: str = ""

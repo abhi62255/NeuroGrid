@@ -11,6 +11,7 @@ import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import { DataGrid } from "@mui/x-data-grid";
 import { EventAPI, TenantAPI } from "../api/client";
 import { useAutoRefresh, useRelativeTime } from "../hooks/useAutoRefresh";
+import { fmtUtcShort } from "../utils/time";
 import StatusChip from "../components/StatusChip";
 
 const STATUS_OPTIONS = ["all", "scheduled", "active", "completed", "cancelled"];
@@ -108,13 +109,13 @@ export default function Events() {
       field: "start_time",
       headerName: "Start",
       width: 165,
-      valueFormatter: (value) => value ? new Date(value).toLocaleString() : "—",
+      valueFormatter: (value) => fmtUtcShort(value),
     },
     {
       field: "end_time",
       headerName: "End",
       width: 165,
-      valueFormatter: (value) => value ? new Date(value).toLocaleString() : "—",
+      valueFormatter: (value) => fmtUtcShort(value),
     },
     {
       field: "actions",

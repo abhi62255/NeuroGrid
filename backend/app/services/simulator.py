@@ -279,9 +279,10 @@ def _build_sim_devices(
 ) -> List[SimulatedDevice]:
     """Instantiate SimulatedDevice objects from ORM Device rows.
 
-    The last *pinned_count* devices in the list are flagged as grid-pinned:
-    they always stay plugged in (charging/idle) and never drive away, making
-    them permanently eligible for Demand Response events.
+    *pinned_count* devices are flagged as grid-pinned (always plugged in,
+    DR-eligible). Selection is deterministic: the devices with the lowest
+    device IDs are pinned, so the same devices are always chosen regardless
+    of restart order or list ordering.
     """
     def _max_power(cap_kwh: float) -> float:
         if cap_kwh >= 82:   return 11.5
@@ -296,7 +297,9 @@ def _build_sim_devices(
     else:
         default_state_pool = ["driving"] * 4 + ["idle"] * 3 + ["unplugged"] * 3
 
-    pinned_ids = {d.id for d in devices[-pinned_count:]} if pinned_count > 0 else set()
+    # Pin the devices with the N smallest IDs — stable across restarts
+    sorted_ids = sorted(d.id for d in devices)
+    pinned_ids = set(sorted_ids[:pinned_count]) if pinned_count > 0 else set()
 
     result = []
     for d in devices:
