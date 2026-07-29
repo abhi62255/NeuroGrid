@@ -90,7 +90,10 @@ def tariff_calendar(tenant_id: int, db: Session = Depends(get_db)):
     # Build one entry per hour (0-23)
     devices = db.query(Device).filter(Device.tenant_id == tenant_id).all()
     num_devices = len(devices) or 1
-    avg_power_kw = sum(d.max_charging_power_kw or 7.2 for d in devices) / num_devices
+    # Use current_power_kw if available, otherwise assume a typical 7.2 kW Level 2 charger
+    avg_power_kw = (
+        sum((d.current_power_kw or 7.2) for d in devices) / num_devices
+    )
 
     windows = []
     for h in range(24):
