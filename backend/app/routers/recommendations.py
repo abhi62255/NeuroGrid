@@ -50,6 +50,8 @@ def accept_recommendation(recommendation_id: int, payload: RecommendationDecisio
         raise HTTPException(404, "Recommendation not found")
     if rec.recommendation_status != RecommendationStatus.pending:
         raise HTTPException(400, "Recommendation already decided")
+    if rec.recommended_start is None or rec.recommended_end is None:
+        raise HTTPException(400, "Recommendation has no event window; cannot create event")
 
     event = Event(
         tenant_id=rec.tenant_id,

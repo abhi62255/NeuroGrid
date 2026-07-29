@@ -90,8 +90,8 @@ export default function DeviceDetail() {
                 <YAxis yAxisId="soc" fontSize={11} domain={[0, 100]} />
                 <YAxis yAxisId="power" orientation="right" fontSize={11} />
                 <Tooltip />
-                <Line yAxisId="soc" type="monotone" dataKey="soc" stroke="#0B2E2C" strokeWidth={2} dot={false} name="SOC %" />
-                <Line yAxisId="power" type="monotone" dataKey="power" stroke="#E08A2C" strokeWidth={2} dot={false} name="Power kW" />
+                <Line yAxisId="soc" type="monotone" dataKey="soc" stroke="#003054" strokeWidth={2} dot={false} name="SOC %" />
+                <Line yAxisId="power" type="monotone" dataKey="power" stroke="#0073A8" strokeWidth={2} dot={false} name="Power kW" />
               </LineChart>
             </ResponsiveContainer>
             {chartData.length === 0 && (

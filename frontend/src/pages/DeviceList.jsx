@@ -50,7 +50,7 @@ export default function DeviceList() {
         headerName: "Device ID",
         width: 95,
         renderCell: (p) => (
-          <Typography variant="body2" sx={{ fontFamily: '"IBM Plex Mono", monospace', fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ fontFamily: '"Inter", monospace', fontWeight: 600 }}>
             #{p.value}
           </Typography>
         ),
@@ -65,7 +65,7 @@ export default function DeviceList() {
         renderCell: (p) => {
           if (p.value == null) return "—";
           const pct = Math.round(p.value);
-          const color = pct > 60 ? "#2E7D5B" : pct > 30 ? "#B96A16" : "#B3261E";
+          const color = pct > 60 ? "#3CAD6E" : pct > 30 ? "#F5A623" : "#D93025";
           return (
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Typography variant="body2" sx={{ fontWeight: 600, color, minWidth: 36 }}>
@@ -105,8 +105,8 @@ export default function DeviceList() {
             size="small"
             label={p.value}
             sx={{
-              bgcolor: p.value === "enrolled" ? "#E8F3EC" : "#F1F0EA",
-              color: p.value === "enrolled" ? "#2E7D5B" : "#5B6B68",
+              bgcolor: p.value === "enrolled" ? "#E6F5EE" : "#EEF1F5",
+              color: p.value === "enrolled" ? "#2E8A57" : "#546E7A",
               fontWeight: 600,
               textTransform: "capitalize",
             }}
@@ -188,7 +188,7 @@ export default function DeviceList() {
           sx={{
             border: "none",
             cursor: "pointer",
-            "& .MuiDataGrid-row:hover": { bgcolor: "rgba(14,76,73,0.04)" },
+            "& .MuiDataGrid-row:hover": { bgcolor: "rgba(0,48,84,0.04)" },
             "& .MuiDataGrid-columnHeader": { bgcolor: "background.default", fontWeight: 700 },
           }}
         />

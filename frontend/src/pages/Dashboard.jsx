@@ -8,7 +8,7 @@ import FlashOnOutlinedIcon from "@mui/icons-material/FlashOnOutlined";
 import { DashboardAPI, RecommendationAPI, EventAPI } from "../api/client";
 import StatCard from "../components/StatCard";
 import StatusChip from "../components/StatusChip";
-import { gridColors } from "../theme";
+import { uplightColors } from "../theme";
 
 export default function Dashboard() {
   const [summary, setSummary] = useState(null);
@@ -39,16 +39,16 @@ export default function Dashboard() {
 
       <Grid container spacing={2.5} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard label="Tenants" value={summary?.total_tenants ?? "–"} accent={gridColors.ink} icon={<ApartmentOutlinedIcon />} />
+          <StatCard label="Tenants" value={summary?.total_tenants ?? "–"} accent={uplightColors.navy} icon={<ApartmentOutlinedIcon />} />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard label="Total EVs" value={summary?.total_evs ?? "–"} accent={gridColors.slate} icon={<EvStationOutlinedIcon />} />
+          <StatCard label="Total EVs" value={summary?.total_evs ?? "–"} accent={uplightColors.slate} icon={<EvStationOutlinedIcon />} />
         </Grid>
         <Grid item xs={12} sm={6} md={2.4}>
           <StatCard
             label="Charging now"
             value={summary?.active_charging_evs ?? "–"}
-            accent={gridColors.green}
+            accent={uplightColors.green}
             icon={<BoltOutlinedIcon />}
           />
         </Grid>
@@ -56,7 +56,7 @@ export default function Dashboard() {
           <StatCard
             label="Pending recommendations"
             value={summary?.recommended_events ?? "–"}
-            accent={gridColors.amber}
+            accent={uplightColors.amber}
             icon={<CampaignOutlinedIcon />}
           />
         </Grid>
@@ -64,7 +64,7 @@ export default function Dashboard() {
           <StatCard
             label="Active DR events"
             value={summary?.active_events ?? "–"}
-            accent={gridColors.amberDeep}
+            accent={uplightColors.blue}
             icon={<FlashOnOutlinedIcon />}
           />
         </Grid>

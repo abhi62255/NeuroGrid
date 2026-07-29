@@ -32,7 +32,7 @@ import PsychologyAltOutlinedIcon from "@mui/icons-material/PsychologyAltOutlined
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { RecommendationAPI, TenantAPI } from "../api/client";
 import StatusChip from "../components/StatusChip";
-import { gridColors } from "../theme";
+import { uplightColors } from "../theme";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const fmt = (val, suffix = "") =>
@@ -56,16 +56,16 @@ function MetricBlock({ icon, label, value, accent }) {
         bgcolor: "background.default",
         border: "1px solid",
         borderColor: "divider",
-        borderTop: `3px solid ${accent || gridColors.slate}`,
+        borderTop: `3px solid ${accent || uplightColors.slate}`,
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-        <Box sx={{ color: accent || gridColors.slate, display: "flex" }}>{icon}</Box>
+        <Box sx={{ color: accent || uplightColors.slate, display: "flex" }}>{icon}</Box>
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
           {label}
         </Typography>
       </Box>
-      <Typography variant="body1" sx={{ fontWeight: 700, fontFamily: '"IBM Plex Mono", monospace' }}>
+      <Typography variant="body1" sx={{ fontWeight: 700, fontFamily: '"Inter", monospace' }}>
         {value}
       </Typography>
     </Box>
@@ -136,7 +136,7 @@ export default function Recommendations() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    const tenantId = tenantFilter !== "all" ? tenantFilter : 1;
+    const tenantId = tenantFilter !== "all" ? tenantFilter : (tenants[0]?.id ?? 1);
     try {
       await RecommendationAPI.generate(tenantId);
       setSnackbar({ severity: "success", message: `AI engine triggered for ${tenantMap[tenantId] || `Tenant ${tenantId}`}.` });
@@ -154,7 +154,7 @@ export default function Recommendations() {
       headerName: "ID",
       width: 70,
       renderCell: (p) => (
-        <Typography variant="body2" sx={{ fontFamily: '"IBM Plex Mono", monospace', fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ fontFamily: '"Inter", monospace', fontWeight: 600 }}>
           #{p.value}
         </Typography>
       ),
@@ -192,7 +192,7 @@ export default function Recommendations() {
       renderCell: (p) => {
         const pct = p.value != null ? Math.round(p.value * 100) : null;
         if (pct == null) return "—";
-        const color = pct >= 80 ? gridColors.green : pct >= 60 ? gridColors.amber : "#B3261E";
+        const color = pct >= 80 ? uplightColors.green : pct >= 60 ? uplightColors.amber : uplightColors.red;
         return (
           <Box sx={{ width: "100%", pr: 1 }}>
             <Typography variant="caption" sx={{ fontWeight: 700, color }}>
@@ -216,7 +216,7 @@ export default function Recommendations() {
           icon={<DevicesIcon sx={{ fontSize: 14 }} />}
           label={p.value != null ? `${p.value} devices` : "—"}
           size="small"
-          sx={{ bgcolor: p.value ? "#EAF1FD" : "#f1f0ea", color: p.value ? "#2A5CAA" : gridColors.slate, fontWeight: 600 }}
+          sx={{ bgcolor: p.value ? "#EAF1FD" : "#f1f0ea", color: p.value ? uplightColors.blue : uplightColors.slate, fontWeight: 600 }}
         />
       ),
     },
@@ -266,7 +266,7 @@ export default function Recommendations() {
 
       {/* ── Tenant Filter ── */}
       <Paper sx={{ p: 2, mb: 2, borderRadius: 3, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-        <PsychologyAltOutlinedIcon sx={{ color: gridColors.slate }} />
+        <PsychologyAltOutlinedIcon sx={{ color: uplightColors.slate }} />
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
           Filter by tenant:
         </Typography>
@@ -303,7 +303,7 @@ export default function Recommendations() {
           sx={{
             border: "none",
             cursor: "pointer",
-            "& .MuiDataGrid-row:hover": { bgcolor: "rgba(14,76,73,0.04)" },
+            "& .MuiDataGrid-row:hover": { bgcolor: "rgba(0,48,84,0.04)" },
             "& .MuiDataGrid-columnHeader": { bgcolor: "background.default", fontWeight: 700 },
           }}
         />
@@ -315,7 +315,7 @@ export default function Recommendations() {
           <>
             <DialogTitle sx={{ pb: 1 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <BoltOutlinedIcon sx={{ color: gridColors.amber }} />
+                <BoltOutlinedIcon sx={{ color: uplightColors.amber }} />
                 <Typography variant="h6">Recommendation #{selected.recommendation_id}</Typography>
                 <Box sx={{ ml: "auto" }}>
                   <StatusChip status={selected.recommendation_status} />
@@ -343,31 +343,31 @@ export default function Recommendations() {
                   icon={<DevicesIcon fontSize="small" />}
                   label="Devices Targeted"
                   value={selected.targeted_device_count != null ? `${selected.targeted_device_count}` : selected.device_links ? `${selected.device_links.length}` : "—"}
-                  accent={gridColors.slate}
+                  accent={uplightColors.slate}
                 />
                  <MetricBlock
                   icon={<ElectricBoltIcon fontSize="small" />}
                   label={selected.event_type === "start_charging" ? "Load Increase" : "Load Reduction"}
                   value={fmt(selected.predicted_load_reduction_kw, " kW")}
-                  accent="#2A5CAA"
+                  accent=uplightColors.blue
                 />
                 <MetricBlock
                   icon={<BoltOutlinedIcon fontSize="small" />}
                   label="Energy Shifted"
                   value={fmt(selected.predicted_energy_shifted_kwh, " kWh")}
-                  accent={gridColors.green}
+                  accent={uplightColors.green}
                 />
                 <MetricBlock
                   icon={<MonetizationOnOutlinedIcon fontSize="small" />}
                   label="Utility Savings"
                   value={fmt(selected.estimated_utility_savings, " $")}
-                  accent={gridColors.amberDeep}
+                  accent={uplightColors.navy}
                 />
                 <MetricBlock
                   icon={<MonetizationOnOutlinedIcon fontSize="small" />}
                   label="Customer Incentive"
                   value={fmt(selected.estimated_customer_incentive, " $")}
-                  accent={gridColors.amber}
+                  accent={uplightColors.amber}
                 />
               </Box>
 
@@ -376,7 +376,7 @@ export default function Recommendations() {
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="overline" color="text.secondary">Event Window</Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.3 }}>
-                    <AccessTimeIcon fontSize="small" sx={{ color: gridColors.amber }} />
+                    <AccessTimeIcon fontSize="small" sx={{ color: uplightColors.amber }} />
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {selected.recommended_start
                         ? `${fmtDate(selected.recommended_start)} → ${fmtTime(selected.recommended_end)}`
@@ -386,7 +386,7 @@ export default function Recommendations() {
                 </Box>
                 <Box>
                   <Typography variant="overline" color="text.secondary">Confidence</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 700, fontFamily: '"IBM Plex Mono", monospace', mt: 0.3 }}>
+                  <Typography variant="body1" sx={{ fontWeight: 700, fontFamily: '"Inter", monospace', mt: 0.3 }}>
                     {selected.confidence_score != null ? `${Math.round(selected.confidence_score * 100)}%` : "—"}
                   </Typography>
                 </Box>
