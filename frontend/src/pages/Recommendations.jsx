@@ -222,7 +222,7 @@ export default function Recommendations() {
       field: "predicted_load_reduction_kw",
       headerName: "Load Shift",
       width: 145,
-      valueFormatter: (value) => fmt(value, " kW"),
+      valueFormatter: (value) => fmt(Math.abs(value), " kW"),
     },
     {
       field: "recommendation_status",
@@ -346,7 +346,7 @@ export default function Recommendations() {
                  <MetricBlock
                   icon={<ElectricBoltIcon fontSize="small" />}
                   label={selected.event_type === "start_charging" ? "Load Increase" : "Load Reduction"}
-                  value={fmt(selected.predicted_load_reduction_kw, " kW")}
+                  value={fmt(Math.abs(selected.predicted_load_reduction_kw), " kW")}
                   accent={uplightColors.blue}
                 />
                 <MetricBlock
