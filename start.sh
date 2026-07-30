@@ -37,6 +37,28 @@ if [[ ! -f "$BACKEND/.env" ]]; then
   echo "     Created .env from example. Edit GEMINI_API_KEY if needed."
 fi
 
+CURRENT_GEMINI_KEY="$(grep -E '^GEMINI_API_KEY=' "$BACKEND/.env" | head -n1 | cut -d'=' -f2- || true)"
+if [[ -z "$CURRENT_GEMINI_KEY" || "$CURRENT_GEMINI_KEY" == "your-gemini-api-key-here" || "$CURRENT_GEMINI_KEY" == "<user's key>" ]]; then
+  echo "     GEMINI_API_KEY is missing."
+  if [[ -t 0 && -t 1 ]]; then
+    read -r -p "     Enter GEMINI_API_KEY (press Enter to skip): " INPUT_GEMINI_KEY
+    if [[ -n "$INPUT_GEMINI_KEY" ]]; then
+      awk -v new_key="$INPUT_GEMINI_KEY" '
+        BEGIN { replaced = 0 }
+        /^GEMINI_API_KEY=/ { print "GEMINI_API_KEY=" new_key; replaced = 1; next }
+        { print }
+        END { if (!replaced) print "GEMINI_API_KEY=" new_key }
+      ' "$BACKEND/.env" > "$BACKEND/.env.tmp"
+      mv "$BACKEND/.env.tmp" "$BACKEND/.env"
+      echo "     GEMINI_API_KEY saved to backend/.env."
+    else
+      echo "     No API key provided — AI recommendations may be disabled."
+    fi
+  else
+    echo "     Non-interactive shell: set GEMINI_API_KEY in backend/.env to enable AI recommendations."
+  fi
+fi
+
 echo "==> [3/5] Seeding demo data..."
 cd "$BACKEND"
 venv/bin/python seed_demo.py 2>&1 | grep -E "OK|already|Error" || true
