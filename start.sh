@@ -72,18 +72,20 @@ else
 fi
 
 echo ""
-echo "==> Starting telemetry simulators (demo-utility:100, pacific-power:50, midwest-energy:50)..."
+echo "==> Starting telemetry simulators (demo-utility:100dev/50pinned, pacific-power:50dev/25pinned, midwest-energy:50dev/25pinned)..."
 cd "$BACKEND"
-for spec in "demo-utility:100" "pacific-power:50" "midwest-energy:50"; do
+for spec in "demo-utility:100:50" "pacific-power:50:25" "midwest-energy:50:25"; do
   TENANT="${spec%%:*}"
-  DEVICES="${spec##*:}"
+  REST="${spec#*:}"
+  DEVICES="${REST%%:*}"
+  PINNED="${REST##*:}"
   if pgrep -f "run_simulator.py --tenant $TENANT" >/dev/null 2>&1; then
     echo "     $TENANT simulator already running — skipping."
   else
     nohup venv/bin/python run_simulator.py \
-      --tenant "$TENANT" --devices "$DEVICES" --interval 45 --randomness 0.3 \
+      --tenant "$TENANT" --devices "$DEVICES" --pinned "$PINNED" --interval 45 --randomness 0.3 \
       > "/tmp/sim-${TENANT}.log" 2>&1 &
-    echo "     $TENANT simulator PID: $!"
+    echo "     $TENANT simulator PID: $! (devices=$DEVICES, pinned=$PINNED)"
   fi
 done
 

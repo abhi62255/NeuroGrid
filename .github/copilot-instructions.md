@@ -85,17 +85,19 @@ Verify: `curl -s http://localhost:3000 | head -3`
 
 Default tenants and device counts (adjust if user specifies different counts):
 
-| Tenant UID        | Default Devices |
-|-------------------|-----------------|
-| `demo-utility`    | 100             |
-| `pacific-power`   | 50              |
-| `midwest-energy`  | 50              |
+| Tenant UID        | Default Devices | Pinned (always-plugged-in) |
+|-------------------|-----------------|----------------------------|
+| `demo-utility`    | 100     | 50 (50%) |
+| `pacific-power`   | 50      | 25 (50%) |
+| `midwest-energy`  | 50      | 25 (50%) |
+
+Pinned EVs never drive — they cycle between charging and idle, keeping them permanently available for DR events.
 
 ```bash
 cd backend
-nohup venv/bin/python run_simulator.py --tenant demo-utility  --devices 100 --interval 45 --randomness 0.3 > /tmp/sim-demo-utility.log 2>&1 &
-nohup venv/bin/python run_simulator.py --tenant pacific-power --devices 50  --interval 45 --randomness 0.3 > /tmp/sim-pacific-power.log 2>&1 &
-nohup venv/bin/python run_simulator.py --tenant midwest-energy --devices 50 --interval 45 --randomness 0.3 > /tmp/sim-midwest-energy.log 2>&1 &
+nohup venv/bin/python run_simulator.py --tenant demo-utility  --devices 100 --pinned 50 --interval 45 --randomness 0.3 > /tmp/sim-demo-utility.log 2>&1 &
+nohup venv/bin/python run_simulator.py --tenant pacific-power --devices 50  --pinned 25 --interval 45 --randomness 0.3 > /tmp/sim-pacific-power.log 2>&1 &
+nohup venv/bin/python run_simulator.py --tenant midwest-energy --devices 50 --pinned 25 --interval 45 --randomness 0.3 > /tmp/sim-midwest-energy.log 2>&1 &
 ```
 
 Simulators write directly to the SQLite telemetry store and produce no stdout output — verify by checking row counts:
