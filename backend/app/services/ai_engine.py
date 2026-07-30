@@ -55,6 +55,11 @@ Constraints:
 - Be conservative with confidence when data is sparse.
 - Even a mid_peak curtailment with 0.7 confidence is valuable — do not over-restrict.
 
+Sign convention for expected_load_reduction_kw:
+- stop_charging (curtailment): POSITIVE number — grid load is reduced.
+- start_charging (smart charging): NEGATIVE number — grid load increases because EVs are drawing more power.
+  Always return a negative value for start_charging events (e.g. -63.0, not 63.0).
+
 Respond with ONLY a single JSON object (no markdown, no prose) matching exactly this shape:
 {
   "recommend_event": boolean,
@@ -63,7 +68,7 @@ Respond with ONLY a single JSON object (no markdown, no prose) matching exactly 
   "reason": string,
   "recommended_start": ISO-8601 datetime string,
   "recommended_end": ISO-8601 datetime string,
-  "expected_load_reduction_kw": number,
+  "expected_load_reduction_kw": number (positive for stop_charging, negative for start_charging),
   "expected_energy_shifted_kwh": number,
   "estimated_customer_incentive": number,
   "estimated_utility_savings": number,
@@ -237,6 +242,16 @@ def generate_recommendation(db: Session, tenant_id: int, lookback_seconds: int =
 
     if not llm_result.get("recommend_event"):
         return None
+
+    # Enforce sign convention regardless of LLM output:
+    # stop_charging  → load reduction is positive (grid load goes down)
+    # start_charging → load reduction is negative (grid load goes up)
+    event_type = llm_result.get("event_type", "stop_charging")
+    raw_kw = llm_result.get("expected_load_reduction_kw") or 0.0
+    if event_type == "start_charging" and raw_kw > 0:
+        llm_result["expected_load_reduction_kw"] = -raw_kw
+    elif event_type == "stop_charging" and raw_kw < 0:
+        llm_result["expected_load_reduction_kw"] = -raw_kw
 
     rec = Recommendation(
         tenant_id=tenant_id,
