@@ -161,7 +161,9 @@ export default function Dashboard() {
                       </Typography>
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {r.predicted_load_reduction_kw != null ? `${r.predicted_load_reduction_kw} kW` : "—"} · Confidence{" "}
+                      {r.predicted_load_reduction_kw != null
+                        ? `${r.event_type === "start_charging" ? "+" : "−"}${Math.abs(r.predicted_load_reduction_kw).toFixed(1)} kW`
+                        : "—"} · Confidence{" "}
                       {r.confidence_score != null ? `${Math.round(r.confidence_score * 100)}%` : "—"}
                     </Typography>
                   </Box>

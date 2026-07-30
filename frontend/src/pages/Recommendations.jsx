@@ -222,7 +222,11 @@ export default function Recommendations() {
       field: "predicted_load_reduction_kw",
       headerName: "Load Shift",
       width: 145,
-      valueFormatter: (value) => fmt(Math.abs(value), " kW"),
+      renderCell: ({ row, value }) => {
+        if (value == null) return "—";
+        const isIncrease = row.event_type === "start_charging";
+        return `${isIncrease ? "+" : "−"}${Math.abs(value).toFixed(1)} kW`;
+      },
     },
     {
       field: "recommendation_status",
