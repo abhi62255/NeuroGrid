@@ -134,13 +134,48 @@ export default function Recommendations() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    const tenantId = tenantFilter !== "all" ? tenantFilter : (tenants[0]?.id ?? 1);
     try {
-      await RecommendationAPI.generate(tenantId);
-      setSnackbar({ severity: "success", message: `AI engine triggered for ${tenantMap[tenantId] || `Tenant ${tenantId}`}.` });
+      if (tenantFilter === "all") {
+        const tenantIds = tenants.map((t) => t.id);
+        if (!tenantIds.length) {
+          setSnackbar({ severity: "error", message: "No tenants available to run the AI engine." });
+          return;
+        }
+
+        const results = await Promise.allSettled(tenantIds.map((tenantId) => RecommendationAPI.generate(tenantId)));
+        const successCount = results.filter((r) => r.status === "fulfilled").length;
+        const failedCount = tenantIds.length - successCount;
+        const firstFailure = results.find((r) => r.status === "rejected");
+        const firstFailureDetail =
+          firstFailure?.status === "rejected"
+            ? firstFailure.reason?.response?.data?.detail
+            : null;
+
+        if (successCount === 0) {
+          setSnackbar({
+            severity: "error",
+            message: firstFailureDetail || "Could not trigger the recommendation engine for any tenant.",
+          });
+          return;
+        }
+
+        setSnackbar({
+          severity: failedCount ? "warning" : "success",
+          message: failedCount
+            ? `${firstFailureDetail ? `${firstFailureDetail} ` : ""}AI engine triggered for ${successCount}/${tenantIds.length} tenants.`
+            : `AI engine triggered for all ${tenantIds.length} tenants.`,
+        });
+      } else {
+        const tenantId = tenantFilter;
+        await RecommendationAPI.generate(tenantId);
+        setSnackbar({ severity: "success", message: `AI engine triggered for ${tenantMap[tenantId] || `Tenant ${tenantId}`}.` });
+      }
       load();
-    } catch {
-      setSnackbar({ severity: "error", message: "Could not trigger the recommendation engine." });
+    } catch (err) {
+      setSnackbar({
+        severity: "error",
+        message: err?.response?.data?.detail || "Could not trigger the recommendation engine.",
+      });
     } finally {
       setGenerating(false);
     }
